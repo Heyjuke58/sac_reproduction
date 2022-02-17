@@ -1,32 +1,40 @@
 import argparse
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 
-def parse_arguments() -> Tuple[Any, ...]:
+def parse_arguments() -> dict[str, Any]:
     parser = argparse.ArgumentParser()
+
     parser.add_argument(
-        "-e",
-        "--examples",
+        "-a",
+        "--algs",
+        "--algorithms",
+        nargs="+",
         type=str,
-        dest="examples",
-        default="0",
-        help="",
+        dest="algs",
+        default=["sac", "td3"],
+        choices=["sac", "td3"],
+        help="Which algorithm(s) to run.",
     )
+
     parser.add_argument(
+        "-s",
         "--seed",
         type=int,
         dest="seed",
         default=33,  # super max
         help="Seed",
     )
+
     parser.add_argument(
-        "--no-viz-attr",
-        dest="viz_attr",
-        action="store_false",
-        help="Whether to visualize the summed attributions for every example.",
+        "-e",
+        "--env",
+        "--environment",
+        dest="env",
+        choices=["hopper-v2", "cheetah-v3"],
+        default="Hopper-v2",
+        help="Which environment to let the algorithms loose on.",
     )
-    parser.set_defaults(viz_attr=True)
 
     args = parser.parse_args()
-
-    return args
+    return vars(args)
