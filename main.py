@@ -1,56 +1,65 @@
 from src.parse_arguments import parse_arguments
-from ray.rllib.agents.ddpg import TD3Trainer
 import torch
+from pathlib import Path
 
+from TD3.main import main as td3_main
+from argparse import Namespace
 
 
 class Experiment:
-    def __init__(self, algs: list[str], env: str, seed: int) -> None:
+    def __init__(
+        self,
+        algs: list[str],
+        env: str,
+        seed: int,
+        runs: int,
+        dest_model_path: str = "./models",
+        dest_res_path: str = "./results",
+    ) -> None:
 
-        if 'td3' in algs:
-            self.td3_config = {
-                "env": env,
-                # Use 2 environment workers (aka "rollout workers") that parallelly
-                # collect samples from their own environment clone(s).
-                "num_workers": 1,
-                "framework": "torch",
-                # Tweak the default model provided automatically by RLlib,
-                # given the environment's observation- and action spaces.
-                "model": {
-                    "fcnet_hiddens": [64, 64],
-                    "fcnet_activation": "relu",
-                },
-                # Set up a separate evaluation worker set for the
-                # `trainer.evaluate()` call after training (see below).
-                "evaluation_num_workers": 1,
-                # Only for evaluation runs, render the env.
-                "evaluation_config": {
-                    "render_env": True,
-                },
-                "buffer_size": 12345,
-                "replay_buffer_config":{
-                    "capacity": 1000000,
-                },
-                "num_gpus": 1,
-            }
-        self.algs = algs
-        self.seed = seed
+        self.algs = algs  # which algorithms to run
+        self.start_seed = seed  # subsequent runs use seed + n
+        self.runs = runs  # runs per algorithms
+        self.env = env  # gym environment string
+        self.dest_model_path = dest_model_path
+        self.dest_res_path = dest_res_path
 
     def run_sac(self):
-        pass
+        for run in range(self.runs):
+            seed = self.start_seed + run
+            pass
 
-    def run_td3(self):
-        trainer = TD3Trainer(config=self.td3_config)
-        for _ in range(100):
-            out = trainer.train()
+    def run_td3(self, td3_params: Namespace):
+        for run in range(self.runs):
+            seed = self.start_seed + run
+            td3_params.seed = seed
+            td3_main(td3_params)
 
-        trainer.evaluate()
 
 if __name__ == "__main__":
     print(torch.cuda.is_available())
     args = parse_arguments()
     exp = Experiment(**args)
     if "td3" in args["algs"]:
-        exp.run_td3()
+        td3_params = Namespace(
+            policy="TD3",
+            env=exp.env,
+            seed=exp.start_seed,
+            start_timesteps=25e3,
+            eval_freq=5e3,
+            max_timesteps=30e3,
+            expl_noise=0.1,
+            batch_size=256,
+            discount=0.99,
+            tau=0.005,
+            policy_noise=0.2,
+            noise_clip=0.5,
+            policy_freq=2,
+            save_model=True,
+            load_model="",
+            dest_model_path=exp.dest_model_path,
+            dest_res_path=exp.dest_res_path,
+        )
+        exp.run_td3(td3_params)
     if "sac" in args["algs"]:
         exp.run_sac()

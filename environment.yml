@@ -10,4 +10,3 @@ dependencies:
   - pip:
     - gym==0.21.0
     - mujoco-py==2.1.2.14
-    - ray[rllib]==1.10.0

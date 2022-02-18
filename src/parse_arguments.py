@@ -18,6 +18,15 @@ def parse_arguments() -> dict[str, Any]:
     )
 
     parser.add_argument(
+        "-r",
+        "--runs",
+        type=int,
+        dest="runs",
+        default=1,
+        help="How many runs per algorithm should be performed.",
+    )
+
+    parser.add_argument(
         "-s",
         "--seed",
         type=int,
