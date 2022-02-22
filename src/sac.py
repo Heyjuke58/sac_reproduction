@@ -1,26 +1,92 @@
 import torch
 import torch.nn as nn
-from torch.nn.functional import relu
+from numpy import ndarray
+from TD3.utils import ReplayBuffer
 from torch import Tensor, tanh
 from torch.distributions.normal import Normal
+from torch.nn.functional import relu
+from typing import Optional
 
+from src.uniform_policy import UniformPolicy
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class SAC:
-    def __init__(self, action_dim: int, state_dim: int, hidden_dim: int, max_action: int) -> None:
-        self.v = Value(state_dim, hidden_dim)
-        self.qf1 = Q(state_dim, action_dim, hidden_dim)
-        self.qf2 = Q(action_dim, action_dim, hidden_dim)
-        self.policy = Policy(action_dim, state_dim, hidden_dim, max_action)
-        self.replay_buffer = []
+    def __init__(
+        self,
+        env,
+        hidden_dim: int,
+        max_action: int,
+        grad_steps: int,
+        batch_size: int,
+        replay_buffer_size: int,
+        n_initial_exploration_steps: int,
+        min_replay_buffer_size: int,
+        max_env_steps: int,
+        adam_kwargs: dict,
+    ) -> None:
+        # neural net functions:
+        state_dim = env.observation_space.shape[0]
+        action_dim = env.action_space.shape[0]
+        self.v = Value(state_dim, hidden_dim, adam_kwargs)
+        self.qf1 = Q(state_dim, action_dim, hidden_dim, adam_kwargs)
+        self.qf2 = Q(action_dim, action_dim, hidden_dim, adam_kwargs)
+        self.policy = Policy(action_dim, state_dim, hidden_dim, max_action, adam_kwargs)
+
+        self.batch_size = batch_size
+        self.replay_buffer = ReplayBuffer(state_dim, action_dim, replay_buffer_size)
+        self.env = env
+        self.grad_steps = grad_steps
+        self.n_initial_exploration_steps = n_initial_exploration_steps
+        self.initial_exploration_policy = UniformPolicy(action_dim, max_action)
+        self.min_replay_buffer_size = min_replay_buffer_size
+
+        # TODO init weights?
+
+    def train(self, iterations: int):
+        """
+        Train the model for a number of iterations.
+        In every iteration, one environment step is taken
+        and self.grad_step gradient steps are done.
+        """
+        state = self.env.reset()
+
+        for i in range(iterations):
+            state = self._train_iteration(state, i)
+
+    def _train_iteration(self, state, iteration: int) -> ndarray:
+        """
+        Do one iteration of training. Returns the state that we end up in after
+        the environment step phase.
+        """
+
+        # Decide whether action is sampled from initial exploration or actual policy
+        if iteration <= self.n_initial_exploration_steps:
+            action = self.initial_exploration_policy.get_random_action()
+        else:
+            action = self.policy(state)
+
+        next_state, reward, done, info = self.env.step(action)
+        self.replay_buffer.add(state, action, next_state, reward, done)
+        if done:
+            state = self.env.reset()
+        else:
+            state = next_state
+
+        for _ in range(self.grad_steps):
+            if self.replay_buffer.size >= self.min_replay_buffer_size:
+                batch = self.replay_buffer.sample(self.batch_size)
+
+        return state
 
 
 class Policy(nn.Module):
     # Gaussian policy
     # For each action in the action space, output a scalar in [-1, 1]
-    def __init__(self, action_dim: int, state_dim: int, hidden_dim: int, max_action: float):
+    def __init__(
+        self, action_dim: int, state_dim: int, hidden_dim: int, max_action: float, adam_kwargs: dict
+    ):
         super(Policy, self).__init__()
 
         self.l1 = nn.Linear(state_dim, hidden_dim)
@@ -31,19 +97,41 @@ class Policy(nn.Module):
         self.action_dim = action_dim
         self.max_action = max_action
 
-    def forward(self, state: Tensor, action: Tensor, deterministic: bool) -> Tensor:
+        self.optimizer = torch.optim.Adam(self.parameters(), **adam_kwargs)
+
+    def forward(
+        self, state: Tensor, deterministic: bool
+    ) -> tuple[Tensor, Optional[tuple[Tensor, Tensor, Tensor]]]:
+        # returns (action, (log_prob(action), mus, log_sigmas))
         h = relu(self.l1(state))
         h = relu(self.l2(h))
         h = self.l3(h)
 
-        mus = h[:self.action_dim]
-        sigmas = h[self.action_dim:]
+        mus = h[: self.action_dim]
+        log_sigmas = h[self.action_dim :]
 
         if deterministic:
-            return self.max_action * tanh(mus)
+            return self.max_action * tanh(mus), None
         else:
-            action = Normal(mus, sigmas).rsample()
-            return self.max_action * tanh(action)
+            normal = Normal(mus, torch.exp(log_sigmas))
+            actions = normal.rsample()
+            log_probs = normal.log_prob(actions)
+            log_probs -= self._correction(actions)
+            return self.max_action * tanh(actions), (log_probs, mus, log_sigmas)
+
+    def _correction(self, actions):
+        # apply a squash correction to the actions for calculating the log_probs correctly (?) (sac code gaussian_policy line 74):
+        # https://github.com/haarnoja/sac/blob/8258e33633c7e37833cc39315891e77adfbe14b2/sac/policies/gaussian_policy.py#L74
+        return torch.sum(torch.log(1 - tanh(actions) ** 2 + 1e-6), dim=1)
+
+    # def _loss(self) -> Tensor:
+    #     pass
+    #
+    # def step(self):
+    #     self.optimizer.zero_grad()
+    #     loss = self._loss()
+    #     loss.backward()
+    #     self.optimizer.step()
 
 
 class Value(nn.Module):

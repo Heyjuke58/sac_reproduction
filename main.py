@@ -62,4 +62,11 @@ if __name__ == "__main__":
         )
         exp.run_td3(td3_params)
     if "sac" in args["algs"]:
+        adam_kwargs = {
+            "lr": 3e-4,
+            "betas": (0.9, 0.999),
+            "eps": 1e-08,
+            "weight_decay": 0,
+            "amsgrad": False,
+        }
         exp.run_sac()

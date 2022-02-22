@@ -43,7 +43,6 @@ class ReproducibilityTester(unittest.TestCase):
         )
         # run experiment for the first time
         td3_main(td3_params)
-        # exp.run_td3(td3_params)
         td3.load(f"./test/models/TD3_{ENV}_{SEED}")
 
         # copy models to later compare them
