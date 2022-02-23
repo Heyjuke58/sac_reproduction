@@ -1,3 +1,7 @@
+from typing import Optional
+from time import perf_counter
+
+import gym
 import torch
 import torch.nn as nn
 from numpy import ndarray
@@ -5,9 +9,9 @@ from TD3.utils import ReplayBuffer
 from torch import Tensor, tanh
 from torch.distributions.normal import Normal
 from torch.nn.functional import relu
-from typing import Optional
 
 from src.uniform_policy import UniformPolicy
+from src.utils import set_seeds
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -15,7 +19,8 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class SAC:
     def __init__(
         self,
-        env,
+        env: str,
+        seed: int,
         hidden_dim: int,
         max_action: int,
         grad_steps: int,
@@ -26,34 +31,43 @@ class SAC:
         max_env_steps: int,
         adam_kwargs: dict,
     ) -> None:
+        # Make env
+        self.env = gym.make(env)
+
         # neural net functions:
-        state_dim = env.observation_space.shape[0]
-        action_dim = env.action_space.shape[0]
+        state_dim = self.env.observation_space.shape[0]
+        action_dim = self.env.action_space.shape[0]
         self.v = Value(state_dim, hidden_dim, adam_kwargs)
         self.qf1 = Q(state_dim, action_dim, hidden_dim, adam_kwargs)
         self.qf2 = Q(action_dim, action_dim, hidden_dim, adam_kwargs)
         self.policy = Policy(action_dim, state_dim, hidden_dim, max_action, adam_kwargs)
 
+        # Other hyperparameters
         self.batch_size = batch_size
         self.replay_buffer = ReplayBuffer(state_dim, action_dim, replay_buffer_size)
-        self.env = env
         self.grad_steps = grad_steps
         self.n_initial_exploration_steps = n_initial_exploration_steps
         self.initial_exploration_policy = UniformPolicy(action_dim, max_action)
         self.min_replay_buffer_size = min_replay_buffer_size
+        self.max_env_steps = max_env_steps
+
+        # Set seeds
+        set_seeds(seed, self.env)
 
         # TODO init weights?
 
-    def train(self, iterations: int):
+    def train(self):
         """
         Train the model for a number of iterations.
         In every iteration, one environment step is taken
         and self.grad_step gradient steps are done.
         """
+        self.start_time = perf_counter()
         state = self.env.reset()
-
-        for i in range(iterations):
+        
+        for i in range(self.max_env_steps):
             state = self._train_iteration(state, i)
+
 
     def _train_iteration(self, state, iteration: int) -> ndarray:
         """
@@ -77,6 +91,10 @@ class SAC:
         for _ in range(self.grad_steps):
             if self.replay_buffer.size >= self.min_replay_buffer_size:
                 batch = self.replay_buffer.sample(self.batch_size)
+
+        # logging
+        elapsed_time = perf_counter() - self.start_time
+
 
         return state
 
