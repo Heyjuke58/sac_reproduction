@@ -44,6 +44,11 @@ class Experiment:
         if self.td3_hpars is None:
             return
 
+        self.td3_hpars.update({
+            "dest_model_path": self.dest_model_path,
+            "dest_res_path": self.dest_res_path
+        })
+
         start_seed = self.td3_hpars["seed"]
         for run in range(self.runs):
             seed = start_seed + run

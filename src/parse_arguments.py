@@ -46,8 +46,10 @@ def parse_arguments() -> dict[str, Any]:
     args = parser.parse_args()
     
     # lookup hyperparameters from the file, based on the passed variable name:
-    args.sac_hpars = getattr(hyperparameters, args.sac_hpars.upper())
-    args.td3_hpars = getattr(hyperparameters, args.td3_hpars.upper())
+    if args.sac_hpars is not None:
+        args.sac_hpars = getattr(hyperparameters, args.sac_hpars.upper())
+    if args.td3_hpars is not None:
+        args.td3_hpars = getattr(hyperparameters, args.td3_hpars.upper())
 
     # convert to dict
     return vars(args)
