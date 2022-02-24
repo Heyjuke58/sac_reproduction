@@ -1,8 +1,8 @@
 MUJOCO_LOG.TXT
 models/*
-results/*
+results/*.csv
 test/models/*
-test/results/*
+test/results/*.csv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

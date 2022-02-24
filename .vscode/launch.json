@@ -8,12 +8,9 @@
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/main.py",
+            "program": "${workspaceFolder}/plot.py",
             "args": [
-                "-a",
-                "sac",
-                "td3",
-                "--seed=33",
+                "-x=time",
             ],
             "console": "integratedTerminal"
         }

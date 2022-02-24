@@ -6,6 +6,7 @@ dependencies:
   - python=3.9
   - pytorch=1.10.2
   - cudatoolkit=11.1.1
+  - seaborn=0.11.2
   - pip=22.0.3
   - pip:
     - gym==0.21.0

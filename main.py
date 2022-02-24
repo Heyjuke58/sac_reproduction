@@ -6,6 +6,7 @@ from typing import Optional
 
 from TD3.main import main as td3_main
 from argparse import Namespace
+from src.utils import get_timestamp
 
 
 class Experiment:
@@ -32,22 +33,28 @@ class Experiment:
         if self.sac_hpars is None:
             return
 
+        timestamp = get_timestamp()
         start_seed = self.sac_hpars["seed"]
         for run in range(self.runs):
             seed = start_seed + run
             self.sac_hpars["seed"] = seed
 
-            sac_experiment = SAC(**self.sac_hpars)
+            sac_experiment = SAC(
+                **self.sac_hpars, file_name=f"SAC_{self.sac_hpars['env']}_{timestamp}"
+            )
             sac_experiment.train()
 
     def _run_td3(self):
         if self.td3_hpars is None:
             return
 
-        self.td3_hpars.update({
-            "dest_model_path": self.dest_model_path,
-            "dest_res_path": self.dest_res_path
-        })
+        self.td3_hpars.update(
+            {
+                "dest_model_path": self.dest_model_path,
+                "dest_res_path": self.dest_res_path,
+                "file_name": f"TD3_{self.td3_hpars['env']}_{get_timestamp()}",
+            }
+        )
 
         start_seed = self.td3_hpars["seed"]
         for run in range(self.runs):
@@ -60,7 +67,7 @@ class Experiment:
 if __name__ == "__main__":
     print(torch.cuda.is_available())
     args = parse_arguments()
-    
+
     exp = Experiment(**args)
     exp.run()
 

@@ -3,6 +3,9 @@ import torch.nn as nn
 from typing import Any, Optional
 import torch
 from torch.distributions.normal import Normal
+from numpy import ndarray
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class Policy(nn.Module):
@@ -39,23 +42,32 @@ class Policy(nn.Module):
         h = relu(self.l2(h))
         h = self.l3(h)
 
-        mus = h[: self.action_dim]
-        log_sigmas = h[self.action_dim :]
+        mus = h[:, : self.action_dim]
+        log_sigmas = h[:, self.action_dim :]
 
         if deterministic:
             return self.max_action * tanh(mus), None
         else:
             # reparametrization trick, sampling closely following the original implementation
             normal = Normal(mus, torch.exp(log_sigmas))
-            actions = normal.rsample()
-            log_probs = normal.log_prob(actions)
-            log_probs -= self._correction(actions)
+            actions = normal.rsample()  # (b, 3)
+            log_probs = normal.log_prob(actions)  # (b, 3)
+            log_probs -= self._correction(actions).unsqueeze(0).T
             return self.max_action * tanh(actions), (log_probs, mus, log_sigmas)
 
     def _correction(self, actions):
         # apply a squash correction to the actions for calculating the log_probs correctly (?) (sac code gaussian_policy line 74):
         # https://github.com/haarnoja/sac/blob/8258e33633c7e37833cc39315891e77adfbe14b2/sac/policies/gaussian_policy.py#L74
         return torch.sum(torch.log(1 - tanh(actions) ** 2 + 1e-6), dim=1)
+
+    def get_action(self, state: ndarray):
+        """Get action for evaluation of policy"""
+        with torch.no_grad():
+            action, _ = self.forward(
+                torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0),
+                deterministic=True,
+            )
+        return action.cpu().numpy()
 
     # def _loss(self) -> Tensor:
     #     pass
@@ -98,6 +110,6 @@ class Q(nn.Module):
         self.optimizer = torch.optim.Adam(self.parameters(), **adam_kwargs)
 
     def forward(self, state: Tensor, action: Tensor) -> Tensor:
-        h = relu(self.l1(torch.cat((state, action), dim=0)))
+        h = relu(self.l1(torch.cat((state, action), dim=1)))
         h = relu(self.l2(h))
         return self.l3(h)

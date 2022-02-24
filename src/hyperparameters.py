@@ -16,25 +16,34 @@ sac_base = {
     "min_replay_buffer_size": 1000,
     # target Value update (exp moving avg. or hard update):
     "target_smoothing": 0.005,
-    "target_update_interval": 1,
+    "target_update_freq": 1,
+    "policy_reg": 1e-3,
+    "discount": 0.99,
+    "eval_freq": int(5e3),
+    "eval_episodes": 10,
     "adam_kwargs": adam_kwargs,
 }
 
 SAC_HOPPER = sac_base.copy()
-SAC_HOPPER.update({
-    "env": "Hopper-v3",
-    "n_initial_exploration_steps": 1000,
-    "scale_reward": 5,
-    "max_env_steps": int(1e6),
-})
+SAC_HOPPER.update(
+    {
+        "env": "Hopper-v3",
+        "n_initial_exploration_steps": 1000,
+        "scale_reward": 5,
+        "max_env_steps": int(1e6),
+        # "max_env_steps": int(5e3),
+    }
+)
 
 SAC_CHEETAH = sac_base.copy()
-SAC_CHEETAH.update({
-    "env": "HalfCheetah-v3",
-    "n_initial_exploration_steps": 10000,
-    "scale_reward": 5,
-    "max_env_steps": int(3e6),
-})
+SAC_CHEETAH.update(
+    {
+        "env": "HalfCheetah-v3",
+        "n_initial_exploration_steps": 10000,
+        "scale_reward": 5,
+        "max_env_steps": int(3e6),
+    }
+)
 
 SAC_V2 = {}
 
@@ -56,11 +65,15 @@ td3_base = {
 }
 
 TD3_HOPPER = td3_base.copy()
-TD3_HOPPER.update({
-    "env": "Hopper-v3",
-})
+TD3_HOPPER.update(
+    {
+        "env": "Hopper-v3",
+    }
+)
 
 TD3_CHEETAH = td3_base.copy()
-TD3_CHEETAH.update({
-    "nev": "HalfCheetah-v3",
-})
+TD3_CHEETAH.update(
+    {
+        "nev": "HalfCheetah-v3",
+    }
+)
