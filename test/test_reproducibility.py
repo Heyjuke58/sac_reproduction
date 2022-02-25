@@ -91,3 +91,13 @@ class ReproducibilityTester(Tester):
             self.assertTrue(torch.equal(x, y))
         for x, y in zip(sac1.target_value.parameters(), sac2.target_value.parameters()):
             self.assertTrue(torch.equal(x, y))
+
+    def test_rsample(self):
+        """
+        Sanity check for seeding rsample
+        """
+        sac1 = SAC(**SAC_HOPPER)
+        sac1.train()
+
+        sac2 = SAC(**SAC_HOPPER)
+        sac2.train()

@@ -1,5 +1,4 @@
-import unittest
-from test import Tester
+from test import Tester, models_equal, sample_tensors
 from src.hyperparameters import SAC_HOPPER
 from src.sac import SAC
 import torch
@@ -22,35 +21,55 @@ class WeightUpdateTester(Tester):
         )
 
         self.sac = SAC(**sac_hpars)
+        self.sac.env.reset()
         return super().setUp()
 
     def test_value_update(self):
-        value_before = copy.deepcopy(self.sac.value)
+        """
+        For these four tests, check if the own network updates and that the other networks don't update.
+        """
+        sac_before = copy.deepcopy(self.sac)
         state = torch.tensor(self.sac.env.reset(), device=device, dtype=torch.float32).unsqueeze(0)
+
         self.sac._value_update(state)
 
-        for x, y in zip(value_before.parameters(), self.sac.value.parameters()):
-            self.assertFalse(torch.equal(x, y))
+        self.assertFalse(models_equal(sac_before.value, self.sac.value))
+        self.assertTrue(models_equal(sac_before.policy, self.sac.policy))
+        self.assertTrue(models_equal(sac_before.target_value, self.sac.target_value))
+        self.assertTrue(models_equal(sac_before.qf1, self.sac.qf1))
+        self.assertTrue(models_equal(sac_before.qf2, self.sac.qf2))
 
     def test_q_update(self):
-        q_before = copy.deepcopy(self.sac.qf1)
-        state = torch.tensor(self.sac.env.reset(), device=device, dtype=torch.float32).unsqueeze(0)
-        # self.sac._q_update(state)
+        sac_before = copy.deepcopy(self.sac)
+        state, action, next_state, reward, done = sample_tensors(self.sac.env)
 
-        for x, y in zip(q_before.parameters(), self.sac.qf1.parameters()):
-            self.assertFalse(torch.equal(x, y))
+        self.sac._q_update(state, action, next_state, reward, done)
+
+        self.assertTrue(models_equal(sac_before.value, self.sac.value))
+        self.assertTrue(models_equal(sac_before.policy, self.sac.policy))
+        self.assertTrue(models_equal(sac_before.target_value, self.sac.target_value))
+        self.assertFalse(models_equal(sac_before.qf1, self.sac.qf1))
+        self.assertFalse(models_equal(sac_before.qf2, self.sac.qf2))
 
     def test_policy_update(self):
-        policy_before = copy.deepcopy(self.sac.policy)
-        state = torch.tensor(self.sac.env.reset(), device=device, dtype=torch.float32).unsqueeze(0)
+        sac_before = copy.deepcopy(self.sac)
+        state, action, next_state, reward, done = sample_tensors(self.sac.env)
+
         self.sac._policy_update(state)
 
-        for x, y in zip(policy_before.parameters(), self.sac.policy.parameters()):
-            self.assertFalse(torch.equal(x, y))
+        self.assertTrue(models_equal(sac_before.value, self.sac.value))
+        self.assertFalse(models_equal(sac_before.policy, self.sac.policy))
+        self.assertTrue(models_equal(sac_before.target_value, self.sac.target_value))
+        self.assertTrue(models_equal(sac_before.qf1, self.sac.qf1))
+        self.assertTrue(models_equal(sac_before.qf2, self.sac.qf2))
 
     def test_target_value_update(self):
-        target_value_before = copy.deepcopy(self.sac.target_value)
+        sac_before = copy.deepcopy(self.sac)
+
         self.sac._target_value_update()
 
-        for x, y in zip(target_value_before.parameters(), self.sac.target_value.parameters()):
-            self.assertFalse(torch.equal(x, y))
+        self.assertTrue(models_equal(sac_before.value, self.sac.value))
+        self.assertTrue(models_equal(sac_before.policy, self.sac.policy))
+        self.assertFalse(models_equal(sac_before.target_value, self.sac.target_value))
+        self.assertTrue(models_equal(sac_before.qf1, self.sac.qf1))
+        self.assertTrue(models_equal(sac_before.qf2, self.sac.qf2))

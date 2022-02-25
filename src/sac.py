@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from time import perf_counter
 import csv
 import os
@@ -181,10 +182,15 @@ class SAC:
     def _target_value_update(self):
         # update exponentially moving average of Value / hard update:
         if self.elapsed_grad_steps % self.target_update_freq == 0:
-            for v_param, v_t_param in zip(self.value.parameters(), self.target_value.parameters()):
-                v_t_param = (
+            new_target_value = OrderedDict()
+            for (v_param_name, v_param), (_, v_t_param) in zip(
+                self.value.state_dict().items(), self.target_value.state_dict().items()
+            ):
+                new_target_value[v_param_name] = (
                     self.target_smoothing * v_param + (1 - self.target_smoothing) * v_t_param
                 )
+
+            self.target_value.load_state_dict(new_target_value)
 
     def _train_iteration(self, state, iteration: int) -> ndarray:
         """
