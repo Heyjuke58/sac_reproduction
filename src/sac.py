@@ -60,6 +60,10 @@ class SAC:
         self.env = gym.make(env)
         self.env_str = env
 
+        # set seeds
+        set_seeds(seed, self.env)
+        self.seed = seed
+
         # neural net functions:
         state_dim = self.env.observation_space.shape[0]
         action_dim = self.env.action_space.shape[0]
@@ -82,16 +86,14 @@ class SAC:
         self.target_smoothing = target_smoothing
         self.target_update_freq = target_update_freq
 
-        # set seeds
-        set_seeds(seed, self.env)
-        self.seed = seed
-
         # Evaluation
         self.eval_freq = eval_freq
         self.eval_episodes = eval_episodes
         self.file_name = file_name
         self.dest_model_path = f"{dest_model_path}/{self.file_name}"
         self.res_file = f"{dest_res_path}/{self.file_name}.csv"
+
+        # Create log file if it does not exist already
         if not os.path.exists(self.res_file):
             with open(self.res_file, "x") as csv_f:
                 hyperpars_str = (
