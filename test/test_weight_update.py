@@ -1,6 +1,6 @@
 from test import Tester, models_equal, sample_tensors
 from src.hyperparameters import SAC_HOPPER
-from src.sac import SAC
+from sac_trainer import SACTrainer
 import torch
 import copy
 
@@ -20,7 +20,7 @@ class WeightUpdateTester(Tester):
             }
         )
 
-        self.sac = SAC(**sac_hpars)
+        self.sac = SACTrainer(**sac_hpars)
         self.sac.env.reset()
         return super().setUp()
 

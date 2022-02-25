@@ -1,11 +1,9 @@
 from src.parse_arguments import parse_arguments
-from src.sac import SAC
+from src.sac_trainer import SACTrainer
 import torch
-import gym
 from typing import Optional
 
 from TD3.main import main as td3_main
-from argparse import Namespace
 from src.utils import get_timestamp
 
 
@@ -39,7 +37,7 @@ class Experiment:
             seed = start_seed + run
             self.sac_hpars["seed"] = seed
 
-            sac_experiment = SAC(
+            sac_experiment = SACTrainer(
                 **self.sac_hpars, file_name=f"SAC_{self.sac_hpars['env']}_{timestamp}"
             )
             sac_experiment.train()
@@ -70,34 +68,3 @@ if __name__ == "__main__":
 
     exp = Experiment(**args)
     exp.run()
-
-    # if "td3" in args["algs"]:
-    #     td3_hpars = Namespace(
-    #         policy="TD3",
-    #         env=exp.env,
-    #         seed=exp.start_seed,
-    #         start_timesteps=25e3,
-    #         eval_freq=5e3,
-    #         max_timesteps=30e3,
-    #         expl_noise=0.1,
-    #         batch_size=256,
-    #         discount=0.99,
-    #         tau=0.005,
-    #         policy_noise=0.2,
-    #         noise_clip=0.5,
-    #         policy_freq=2,
-    #         save_model=True,
-    #         load_model="",
-    #         dest_model_path=exp.dest_model_path,
-    #         dest_res_path=exp.dest_res_path,
-    #     )
-    #     exp.run_td3(td3_hpars)
-    # if "sac" in args["algs"]:
-    #     adam_kwargs = {
-    #         "lr": 3e-4,
-    #         "betas": (0.9, 0.999),
-    #         "eps": 1e-08,
-    #         "weight_decay": 0,
-    #         "amsgrad": False,
-    #     }
-    #     exp.run_sac()

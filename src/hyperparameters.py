@@ -7,7 +7,7 @@ adam_kwargs = {
 }
 
 sac_base = {
-    "seed": 33,
+    "seed": 42,
     "hidden_dim": 256,
     "max_action": 1.0,
     "grad_steps": 1,

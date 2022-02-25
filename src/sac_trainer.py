@@ -16,7 +16,7 @@ from src.utils import get_timestamp
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-class SAC:
+class SACTrainer:
     def __init__(
         self,
         seed: int,
@@ -279,4 +279,7 @@ class SAC:
             writer.writerow([avg_reward, time, env_steps, self.elapsed_grad_steps, self.seed])
 
     def save(self, filename: str):
-        torch.save(self.policy.state_dict(), filename + "_policy")
+        torch.save(self.policy, filename + "_policy")
+
+    def load(self, filename: str):
+        self.policy.load_state_dict(torch.load(filename))
