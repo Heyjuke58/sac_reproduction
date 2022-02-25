@@ -1,6 +1,6 @@
 from test import Tester, models_equal, sample_tensors
 from src.hyperparameters import SAC_HOPPER
-from sac_trainer import SACTrainer
+from src.sac_trainer import SACTrainer
 import torch
 import copy
 

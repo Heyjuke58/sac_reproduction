@@ -5,7 +5,7 @@ import gym
 from copy import deepcopy
 import torch
 from TD3.main import main as td3_main
-from sac_trainer import SACTrainer
+from src.sac_trainer import SACTrainer
 from src.hyperparameters import SAC_HOPPER
 from test import Tester
 
@@ -69,7 +69,7 @@ class ReproducibilityTester(Tester):
             {
                 "seed": 12,
                 "max_env_steps": 2000,
-                "file_name": "test",
+                "file_name": "sac",
                 "dest_model_path": "./test/models",
                 "dest_res_path": "./test/results",
             }
