@@ -255,10 +255,11 @@ class SACTrainer:
 
     def eval_policy(self):
         eval_env = gym.make(self.env_str)
-        eval_env.seed(self.seed + 100)
 
         avg_reward = 0.0
-        for _ in range(self.eval_episodes):
+        for i in range(self.eval_episodes):
+            # several seeds for evaluation
+            eval_env.seed(self.seed + 100 + i)
             state, done = eval_env.reset(), False
             while not done:
                 action = self.policy.get_action(state)
