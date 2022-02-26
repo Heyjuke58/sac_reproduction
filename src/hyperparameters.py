@@ -74,6 +74,7 @@ TD3_HOPPER.update(
 TD3_CHEETAH = td3_base.copy()
 TD3_CHEETAH.update(
     {
-        "nev": "HalfCheetah-v3",
+        "env": "HalfCheetah-v3",
+        "max_timesteps": 3e6,
     }
 )

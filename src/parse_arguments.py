@@ -63,6 +63,11 @@ def parse_arguments() -> dict[str, Any]:
     dict_args = vars(args)
 
     if args.seed is not None:
-        dict_args.update({"seed": args.seed})
+        if args.sac_hpars is not None:
+            dict_args["sac_hpars"].update({"seed": args.seed})
+        if args.td3_hpars is not None:
+            dict_args["td3_hpars"].update({"seed": args.seed})
+    
+    dict_args.pop('seed')
 
     return dict_args

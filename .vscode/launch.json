@@ -5,12 +5,23 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Current File",
+            "name": "Plot",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/plot.py",
             "args": [
                 "-x=time",
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Main",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/main.py",
+            "args": [
+                "--td3=td3_cheetah",
+                "--seed=12",
             ],
             "console": "integratedTerminal"
         }
