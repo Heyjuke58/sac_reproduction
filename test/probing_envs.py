@@ -26,13 +26,25 @@ class FloatDiscrete:
         return
 
 
+class MinusPlusDiscrete:
+    # returns values of -1 or +1
+    def __init__(self) -> None:
+        self.np_random, _ = seeding.np_random(None)
+        self.shape = (1,)
+        return
+
+    def sample(self) -> float:
+        return float(np.random.randint(1)) * 2 - 1
+
+    def seed(self, _):
+        return
+
+
 class Probe1(gym.Env):
     def __init__(self) -> None:
         super().__init__()
         self.action_space = FloatDiscrete(1)
         self.observation_space = FloatDiscrete(1)
-        # self.action_space = Box(0, 0, (1,), dtype=np.float32)
-        # self.observation_space = Box(0, 0, (1,), dtype=np.float32)
 
     def step(self, action):
         return np.array([0.0], dtype=np.float32), 1, 1, {}
@@ -86,11 +98,11 @@ class Probe3(gym.Env):
 class Probe4(gym.Env):
     def __init__(self) -> None:
         super().__init__()
-        self.action_space = FloatDiscrete(1)
+        self.action_space = MinusPlusDiscrete()
         self.observation_space = FloatDiscrete(1)
 
     def step(self, action):
-        action = 0.0 if action <= 0 else 1.0
+        action = -1.0 if action <= 0 else 1.0
         return np.array([0.0]), action, 1, {}
 
     def reset(self):
@@ -100,15 +112,17 @@ class Probe4(gym.Env):
 class Probe5(gym.Env):
     def __init__(self) -> None:
         super().__init__()
-        self.action_space = FloatDiscrete(1)
-        self.observation_space = FloatDiscrete(3)
+        self.action_space = MinusPlusDiscrete()
+        # self.observation_space = FloatDiscrete(3)
+        self.observation_space = FloatDiscrete(2)
 
     def step(self, action):
         action = 0.0 if action <= 0 else 1.0
         if self.state == 2.0:
             reward = 0.0
         else:
-            reward = float(action == self.state)
+            reward = float(action == self.state) * 2 - 1
+            # reward = action
         r = np.array([0.0]), reward, 1, {}
         self.state = 100.0  # shouldn't matter
         return r

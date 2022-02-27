@@ -28,7 +28,7 @@ def parse_args() -> dict[str, Any]:
     args["alg_name"] = file_info[0]
     args["env"] = file_info[1]
     assert args["alg_name"] in ["SAC", "TD3"]
-    assert args["env"] in ["Hopper-v3", "Cheetah-v3"]
+    assert args["env"] in ["Hopper-v3", "HalfCheetah-v3"]
 
     return args
 
@@ -47,7 +47,7 @@ def main():
         alg = SACEvaluator(args["model_file"], max_action=max_action)
     elif args["alg_name"] == "TD3":
         alg = TD3(state_dim=state_dim, action_dim=action_dim, max_action=max_action)
-        alg.load("models/TD3_Hopper-v3_1337")
+        alg.load(args["model_file"])
 
     observation = env.reset()
     for _ in range(10000):

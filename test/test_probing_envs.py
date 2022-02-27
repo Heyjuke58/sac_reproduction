@@ -39,6 +39,12 @@ class ProbingEnvs(Tester):
 
         state, action, next_state, reward, done = sample_tensors(env)
         self.assertAlmostEqual(sac.value(state).detach().cpu().item(), 1.0, places=3)
+        self.assertAlmostEqual(
+            sac.qf1(state, action.unsqueeze(0)).detach().cpu().item(), 1.0, places=3
+        )
+        self.assertAlmostEqual(
+            sac.qf2(state, action.unsqueeze(0)).detach().cpu().item(), 1.0, places=3
+        )
 
     def test_probe_2(self):
         """
@@ -50,10 +56,13 @@ class ProbingEnvs(Tester):
         sac = SACTrainer(**sac_hpars_2)
         sac.train()
 
-        s_0 = torch.tensor([0.0], device=device)
-        s_1 = torch.tensor([1.0], device=device)
+        s_0 = torch.tensor([0.0], device=device).unsqueeze(0)
+        s_1 = torch.tensor([1.0], device=device).unsqueeze(0)
+        a_0 = torch.tensor([0.0], device=device).unsqueeze(0)
         self.assertAlmostEqual(sac.value(s_0).detach().cpu().item(), 0.0, places=3)
         self.assertAlmostEqual(sac.value(s_1).detach().cpu().item(), 1.0, places=3)
+        self.assertAlmostEqual(sac.qf1(s_0, a_0).detach().cpu().item(), 0.0, places=3)
+        self.assertAlmostEqual(sac.qf1(s_1, a_0).detach().cpu().item(), 1.0, places=3)
 
     def test_probe_3(self):
         """
@@ -76,36 +85,50 @@ class ProbingEnvs(Tester):
         """
         env = Probe4()
         sac_hpars_4 = self.sac_hpars.copy()
-        sac_hpars_4.update({"env": env, "max_env_steps": 5000, "max_action": 1})
+        sac_hpars_4.update({"env": env, "max_env_steps": 2000, "max_action": 1})
         sac = SACTrainer(**sac_hpars_4)
         sac.train()
 
         s_0 = torch.tensor([0.0], device=device).unsqueeze(0)
         action, _ = sac.policy(s_0, deterministic=True)
         action = 0.0 if action.detach().cpu().item() <= 0 else 1.0
-        self.assertAlmostEqual(sac.value(s_0).detach().cpu().item(), 1.0, places=3)
+        self.assertAlmostEqual(sac.value(s_0).detach().cpu().item(), 1.0, delta=0.1)
         self.assertEqual(action, 1.0)
+
+        a_1 = torch.tensor([1.0], device=device).unsqueeze(0)
+        self.assertAlmostEqual(sac.qf1(s_0, a_1).detach().cpu().item(), 1.0, delta=0.1)
+        self.assertAlmostEqual(sac.qf2(s_0, a_1).detach().cpu().item(), 1.0, delta=0.1)
+        # cannot test OOD actions:
+        # self.assertAlmostEqual(sac.qf1(s_0, a_0).detach().cpu().item(), 0.0, delta=0.1)
+        # self.assertAlmostEqual(sac.qf2(s_0, a_0).detach().cpu().item(), 0.0, delta=0.1)
 
     def test_probe_5(self):
         """
-        State is either 0 or 1, need to take action equal to state.
+        State is either 0 or 1, need to take action -1 in state 0 and 1 in state 1.
         """
         env = Probe5()
         sac_hpars_5 = self.sac_hpars.copy()
-        sac_hpars_5.update({"env": env, "max_env_steps": 2000, "max_action": 1, "discount": 0})
+        sac_hpars_5.update({"env": env, "max_env_steps": 2000, "max_action": 1})
         sac = SACTrainer(**sac_hpars_5)
         sac.train()
 
         s_0 = torch.tensor([0.0], device=device).unsqueeze(0)
         s_1 = torch.tensor([1.0], device=device).unsqueeze(0)
-        s_2 = torch.tensor([2.0], device=device).unsqueeze(0)
         a_0, _ = sac.policy(s_0, deterministic=True)
         a_1, _ = sac.policy(s_1, deterministic=True)
-        a_0 = 0.0 if a_0.detach().cpu().item() <= 0 else 1.0
-        a_1 = 0.0 if a_1.detach().cpu().item() <= 0 else 1.0
+        a_0 = -1.0 if a_0.detach().cpu().item() <= 0 else 1.0
+        a_1 = -1.0 if a_1.detach().cpu().item() <= 0 else 1.0
 
-        self.assertAlmostEqual(sac.value(s_0).detach().cpu().item(), 1.0, places=3)
-        self.assertAlmostEqual(sac.value(s_1).detach().cpu().item(), 1.0, places=3)
-        self.assertAlmostEqual(sac.value(s_2).detach().cpu().item(), 0.0, places=3)
-        self.assertEqual(a_0, 0.0)
+        # check V
+        self.assertAlmostEqual(sac.value(s_0).detach().cpu().item(), 1.0, delta=0.1)
+        self.assertAlmostEqual(sac.value(s_1).detach().cpu().item(), 1.0, delta=0.1)
+        # check Policy
+        self.assertEqual(a_0, -1.0)
         self.assertEqual(a_1, 1.0)
+        # check in-distribution Q
+        a_0 = torch.tensor([-1.0], device=device).unsqueeze(0)
+        a_1 = torch.tensor([1.0], device=device).unsqueeze(0)
+        self.assertAlmostEqual(sac.qf1(s_0, a_0).detach().cpu().item(), 1.0, delta=0.1)
+        self.assertAlmostEqual(sac.qf1(s_1, a_1).detach().cpu().item(), 1.0, delta=0.1)
+        self.assertAlmostEqual(sac.qf2(s_0, a_0).detach().cpu().item(), 1.0, delta=0.1)
+        self.assertAlmostEqual(sac.qf2(s_1, a_1).detach().cpu().item(), 1.0, delta=0.1)

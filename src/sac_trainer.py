@@ -241,7 +241,7 @@ class SACTrainer:
 
         ### ENV STEP ###
         # Decide whether action is sampled from initial exploration or actual policy
-        if iteration <= self.n_initial_exploration_steps:
+        if iteration <= self.n_initial_exploration_steps and self.n_initial_exploration_steps != 0:
             action = self.env.action_space.sample()
         else:
             with torch.no_grad():  # TODO maybe needs to be detach()?
