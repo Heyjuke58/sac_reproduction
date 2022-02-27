@@ -10,6 +10,7 @@
     - output size = 2 * action_space
 - im policy loss wird im code nur eins der beiden value functions für KL benutzt
 - policy loss hat auch regularization:
+- reihenfolge der gradient updates ist im code anders
 
 # Logging
 - Sollte Zeit (timestamps) und env steps enthalten um nach Zeit und Sampling Effizienz zu unterscheiden.

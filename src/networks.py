@@ -50,9 +50,11 @@ class Policy(nn.Module):
         else:
             # reparametrization trick, sampling closely following the original implementation
             normal = Normal(mus, torch.exp(log_sigmas))
-            actions = normal.rsample()  # (b, 3)
-            log_probs = normal.log_prob(actions)  # (b, 3)
+            actions = normal.rsample()  # (b, action space dim)
+            log_probs = normal.log_prob(actions)  # (b, action space dim)
             log_probs -= self._correction(actions).unsqueeze(0).T
+            if self.max_action == 0.0:  # only for debugging
+                log_probs *= 0.0
             return self.max_action * tanh(actions), (log_probs, mus, log_sigmas)
 
     def _correction(self, actions):

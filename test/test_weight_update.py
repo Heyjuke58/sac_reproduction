@@ -14,7 +14,7 @@ class WeightUpdateTester(Tester):
             {
                 "seed": 12,
                 "max_env_steps": 2000,
-                "file_name": "test",
+                "file_name": "sac",
                 "dest_model_path": "./test/models",
                 "dest_res_path": "./test/results",
             }

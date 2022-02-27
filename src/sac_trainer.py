@@ -2,6 +2,8 @@ from collections import OrderedDict
 from time import perf_counter
 import csv
 import os
+from typing import Union
+from copy import deepcopy
 
 import gym
 import torch
@@ -29,7 +31,7 @@ class SACTrainer:
         target_smoothing: int,
         target_update_freq: int,
         policy_reg: float,
-        env: str,
+        env: Union[str, gym.Env],
         n_initial_exploration_steps: int,
         scale_reward: int,
         discount: float,
@@ -58,8 +60,14 @@ class SACTrainer:
         :param adam_kwargs:
         """
         # Make env
-        self.env = gym.make(env)
-        self.env_str = env
+        if isinstance(env, str):
+            self.env = gym.make(env)
+            self.eval_env = gym.make(env)
+            self.env_str = env
+        else:
+            self.env = env
+            self.eval_env = deepcopy(env)
+            self.env_str = env.__class__.__name__
 
         # set seeds
         set_seeds(seed, self.env)
@@ -140,6 +148,37 @@ class SACTrainer:
         for i in range(self.max_env_steps):
             state = self._train_iteration(state, i)
 
+    def _value_and_policy_update(self, states: Tensor):
+        # all: (b, |action_space|)
+        # TODO: test take min of q values
+        sampled_actions, (log_probs, mus, log_sigmas) = self.policy(states, deterministic=False)
+        q1s = self.qf1(states, sampled_actions)
+        policy_kl_loss = torch.mean(log_probs - q1s)
+        policy_reg_loss = (
+            self.policy_reg * 0.5 * (torch.mean(log_sigmas**2) + torch.mean(mus**2))
+        )
+        policy_loss = policy_kl_loss + policy_reg_loss
+
+        # gradient update:
+        self.policy.optimizer.zero_grad()
+        policy_loss.backward()
+        self.policy.optimizer.step()
+
+        values = self.value(states)  # (b, 1)
+        with torch.no_grad():
+            # sampled_actions = sampled_actions.detach()
+            # sampled_actions, (log_probs, _, _) = self.policy(states, deterministic=False)
+            q1s = self.qf1(states, sampled_actions)
+            q2s = self.qf2(states, sampled_actions)
+            q_mins = torch.minimum(q1s, q2s)  # (b, 1)
+        log_probs = log_probs.detach()
+        value_loss = torch.mean(0.5 * (values - (q_mins - log_probs)) ** 2)
+
+        # gradient update:
+        self.value.optimizer.zero_grad()
+        value_loss.backward()
+        self.value.optimizer.step()
+
     def _value_update(self, states: Tensor):
         values = self.value(states)  # (b, 1)
         with torch.no_grad():
@@ -166,7 +205,7 @@ class SACTrainer:
             qf_loss.backward()
             qf.optimizer.step()
 
-    def _policy_update(self, states):
+    def _policy_update(self, states: Tensor):
         # all: (b, |action_space|)
         sampled_actions, (log_probs, mus, log_sigmas) = self.policy(states, deterministic=False)
         q1s = self.qf1(states, sampled_actions)
@@ -200,6 +239,7 @@ class SACTrainer:
         the environment step phase.
         """
 
+        ### ENV STEP ###
         # Decide whether action is sampled from initial exploration or actual policy
         if iteration <= self.n_initial_exploration_steps:
             action = self.env.action_space.sample()
@@ -226,6 +266,7 @@ class SACTrainer:
         else:
             state = next_state
 
+        ### GRAD STEP(S) ###
         # multiple grad steps per iteration. Only after replay buffer has enough samples:
         for _ in range(self.grad_steps):
             if self.replay_buffer.size > self.min_replay_buffer_size:
@@ -233,10 +274,16 @@ class SACTrainer:
                     self.batch_size
                 )
 
-                self._value_update(states)
+                # order as in code
+                self._value_and_policy_update(states)
                 self._q_update(states, actions, next_states, rewards, dones)
-                self._policy_update(states)
                 self._target_value_update()
+
+                # order as in paper
+                # self._value_update(states)
+                # self._q_update(states, actions, next_states, rewards, dones)
+                # self._policy_update(states)
+                # self._target_value_update()
 
                 self.elapsed_grad_steps += 1
 
@@ -246,24 +293,20 @@ class SACTrainer:
             avg_reward = self.eval_policy()
             self.write_eval_to_csv(avg_reward, elapsed_time, iteration + 1)
 
-            # TODO: save model
-
             # ignore time for evaluation by adding it to start time
             self.start_time += perf_counter() - start_time_eval
 
         return state
 
     def eval_policy(self):
-        eval_env = gym.make(self.env_str)
-
         avg_reward = 0.0
         for i in range(self.eval_episodes):
             # several seeds for evaluation
-            eval_env.seed(self.seed + 100 + i)
-            state, done = eval_env.reset(), False
+            self.eval_env.seed(self.seed + 100 + i)
+            state, done = self.eval_env.reset(), False
             while not done:
                 action = self.policy.get_action(state)
-                state, reward, done, _ = eval_env.step(action)
+                state, reward, done, _ = self.eval_env.step(action)
                 avg_reward += reward
 
         avg_reward /= self.eval_episodes
