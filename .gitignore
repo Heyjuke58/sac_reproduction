@@ -1,6 +1,7 @@
 MUJOCO_LOG.TXT
 models/*
 results/*.csv
+results/plot/*
 test/models/*
 test/results/*.csv
 

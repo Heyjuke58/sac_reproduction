@@ -12,6 +12,9 @@
 - policy loss hat auch regularization:
 - reihenfolge der gradient updates ist im code anders
 - die log_sigmas werden im code in `[-20, 2]` geclippt -> sigmas in `[2.1e-9, 7.4]`
+- wir benutzen eine neuere Version von MuJoCo
+
+- in v2: im Code wurde im neuesten Commit auf mean(Q1, Q2) anstatt min(Q1, Q2) gesetzt, und zwar nur im Policy update.
 
 # Logging
 - Sollte Zeit (timestamps) und env steps enthalten um nach Zeit und Sampling Effizienz zu unterscheiden.
@@ -28,5 +31,32 @@
 - eval für sac (daten speichern)
 - tests für sac
 - plotten
+
+# RUNS TODO:
+
+Hauke:
+3x TD3 Hopper 1e6 env steps ()
+3x TD3 Cheetah 1,5e6 env steps (~4h each)
+
+## Time for runs
+
+- Konrad:
+    - SAC V1:
+        - Cheetah, 1M env steps: 1.6h
+        - Cheetah, 1.5M env steps: 2.5h
+        - Hopper, 1M env steps: 1.8h
+        - TODO: cheetah 1.5m x 3 + hopper 1m x 3 -> 12.9h
+    - SAC V2 ohne alpha tuning
+        - cheetah * 4 + hopper * 4 -> 16.2h
+        - hopper * 4 -> 7.2h
+    - SAC V2 mit alpha tuning
+        - cheetah * 4 + hopper * 4 -> 16.2h
+        - hopper * 4 -> 7.2h
+    - SAC V1 mit hard target update
+        - erstmal nicht
+- Hauke:
+    - TD3:
+        - 3x TD3 Hopper 1M env steps (1.8h each) -> 5.5h
+        - 3x TD3 Cheetah 1.5M env steps (~4h each) -> 12h
 
 ## Checklist

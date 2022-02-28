@@ -28,7 +28,7 @@ class SACTrainer:
         batch_size: int,
         replay_buffer_size: int,
         min_replay_buffer_size: int,
-        target_smoothing: int,
+        target_smoothing: float,
         target_update_freq: int,
         policy_reg: float,
         env: Union[str, gym.Env],
@@ -77,7 +77,8 @@ class SACTrainer:
         state_dim = self.env.observation_space.shape[0]
         action_dim = self.env.action_space.shape[0]
         self.value = Value(state_dim, hidden_dim, adam_kwargs).to(device)
-        self.target_value = Value(state_dim, hidden_dim, adam_kwargs).to(device)
+        # self.target_value = Value(state_dim, hidden_dim, adam_kwargs).to(device)
+        self.target_value = deepcopy(self.value)
         self.qf1 = Q(state_dim, action_dim, hidden_dim, adam_kwargs).to(device)
         self.qf2 = Q(state_dim, action_dim, hidden_dim, adam_kwargs).to(device)
         self.policy = Policy(state_dim, action_dim, hidden_dim, max_action, adam_kwargs).to(device)
@@ -166,8 +167,6 @@ class SACTrainer:
 
         values = self.value(states)  # (b, 1)
         with torch.no_grad():
-            # sampled_actions = sampled_actions.detach()
-            # sampled_actions, (log_probs, _, _) = self.policy(states, deterministic=False)
             q1s = self.qf1(states, sampled_actions)
             q2s = self.qf2(states, sampled_actions)
             q_mins = torch.minimum(q1s, q2s)  # (b, 1)
@@ -274,17 +273,7 @@ class SACTrainer:
                     self.batch_size
                 )
 
-                # order as in code
-                self._value_and_policy_update(states)
-                self._q_update(states, actions, next_states, rewards, dones)
-                self._target_value_update()
-
-                # order as in paper
-                # self._value_update(states)
-                # self._q_update(states, actions, next_states, rewards, dones)
-                # self._policy_update(states)
-                # self._target_value_update()
-
+                self._do_updates(states, actions, next_states, rewards, dones)
                 self.elapsed_grad_steps += 1
 
         if (iteration + 1) % self.eval_freq == 0:
@@ -297,6 +286,18 @@ class SACTrainer:
             self.start_time += perf_counter() - start_time_eval
 
         return state
+
+    def _do_updates(self, states, actions, next_states, rewards, dones) -> None:
+        # order as in code
+        self._value_and_policy_update(states)
+        self._q_update(states, actions, next_states, rewards, dones)
+        self._target_value_update()
+
+        # order as in paper
+        # self._value_update(states)
+        # self._q_update(states, actions, next_states, rewards, dones)
+        # self._policy_update(states)
+        # self._target_value_update()
 
     def eval_policy(self):
         avg_reward = 0.0

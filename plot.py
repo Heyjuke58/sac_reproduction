@@ -52,6 +52,7 @@ def main(x: str):
             sns.lineplot(x=all_xs, y=all_ys, ax=ax)
         else:
             sns.lineplot(data=results_df, x=x, y="avg_reward", ax=ax)
+    plt.grid()
     plt.show()
 
 

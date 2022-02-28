@@ -24,6 +24,14 @@ def parse_arguments() -> dict[str, Any]:
     )
 
     parser.add_argument(
+        "--sac-v2",
+        "--sac-v2-hpars",
+        type=str,
+        dest="sac_v2_hpars",
+        help="Choice of a set of hyperparameters from src/hyperparameters.py, for running SAC V2. String is converted to upper case.",
+    )
+
+    parser.add_argument(
         "--td3",
         "--td3-hpars",
         type=str,
