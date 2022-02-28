@@ -12,7 +12,6 @@ class SACEvaluator:
 
     def select_action(self, state: ndarray) -> ndarray:
         t_state = torch.tensor(state, device=device, dtype=torch.float32)
-        # t_state = torch.from_numpy(state).to(device)
         assert t_state.dim() == 1
         return (
             self.max_action

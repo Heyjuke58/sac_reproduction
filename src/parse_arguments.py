@@ -6,18 +6,6 @@ import src.hyperparameters as hyperparameters
 def parse_arguments() -> dict[str, Any]:
     parser = argparse.ArgumentParser()
 
-    # parser.add_argument(
-    #     "-a",
-    #     "--algs",
-    #     "--algorithms",
-    #     nargs="+",
-    #     type=str,
-    #     dest="algs",
-    #     default=["sac", "td3"],
-    #     choices=["sac", "td3"],
-    #     help="Which algorithm(s) to run.",
-    # )
-
     parser.add_argument(
         "-r",
         "--runs",
@@ -67,7 +55,7 @@ def parse_arguments() -> dict[str, Any]:
             dict_args["sac_hpars"].update({"seed": args.seed})
         if args.td3_hpars is not None:
             dict_args["td3_hpars"].update({"seed": args.seed})
-    
-    dict_args.pop('seed')
+
+    dict_args.pop("seed")
 
     return dict_args

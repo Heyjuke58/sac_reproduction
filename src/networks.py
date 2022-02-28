@@ -7,6 +7,9 @@ from numpy import ndarray
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+LOG_SIG_MAX = 2
+LOG_SIG_MIN = -20
+
 
 class Policy(nn.Module):
     # Gaussian policy
@@ -45,6 +48,9 @@ class Policy(nn.Module):
         mus = h[:, : self.action_dim]
         log_sigmas = h[:, self.action_dim :]
 
+        # clip log sigmas
+        log_sigmas = torch.clamp(log_sigmas, min=LOG_SIG_MIN, max=LOG_SIG_MAX)
+
         if deterministic:
             return self.max_action * tanh(mus), None
         else:
@@ -70,15 +76,6 @@ class Policy(nn.Module):
                 deterministic=True,
             )
         return action.cpu().numpy()
-
-    # def _loss(self) -> Tensor:
-    #     pass
-    #
-    # def step(self):
-    #     self.optimizer.zero_grad()
-    #     loss = self._loss()
-    #     loss.backward()
-    #     self.optimizer.step()
 
 
 class Value(nn.Module):
