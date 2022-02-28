@@ -52,6 +52,8 @@ def parse_arguments() -> dict[str, Any]:
     # lookup hyperparameters from the file, based on the passed variable name:
     if args.sac_hpars is not None:
         args.sac_hpars = getattr(hyperparameters, args.sac_hpars.upper())
+    if args.sac_v2_hpars is not None:
+        args.sac_v2_hpars = getattr(hyperparameters, args.sac_v2_hpars.upper())
     if args.td3_hpars is not None:
         args.td3_hpars = getattr(hyperparameters, args.td3_hpars.upper())
 
@@ -61,6 +63,8 @@ def parse_arguments() -> dict[str, Any]:
     if args.seed is not None:
         if args.sac_hpars is not None:
             dict_args["sac_hpars"].update({"seed": args.seed})
+        if args.sac_v2_hpars is not None:
+            dict_args["sac_v2_hpars"].update({"seed": args.seed})
         if args.td3_hpars is not None:
             dict_args["td3_hpars"].update({"seed": args.seed})
 

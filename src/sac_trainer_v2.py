@@ -25,6 +25,7 @@ class SACTrainerV2(SACTrainer):
         self,
         seed: int,
         hidden_dim: int,
+        grad_steps: int,
         batch_size: int,
         replay_buffer_size: int,
         min_replay_buffer_size: int,  # check usage
@@ -76,6 +77,7 @@ class SACTrainerV2(SACTrainer):
         self.min_replay_buffer_size = min_replay_buffer_size
         self.max_env_steps = max_env_steps
         self.discount = discount
+        self.grad_steps = grad_steps
         self.target_smoothing = target_smoothing
         self.target_update_freq = target_update_freq
 
@@ -100,8 +102,7 @@ class SACTrainerV2(SACTrainer):
                     f"Max env steps: {self.max_env_steps}\n"
                     f"Batch size: {self.batch_size}\n"
                     f"Discount factor: {self.discount}\n"
-                    f"Policy regularization factor: {self.policy_reg}\n"
-                    f"Reward scaling: {self.scale_reward}\n"
+                    f"Target entropy: {self.target_entropy}\n"
                     f"Target network update smoothing (τ): {self.target_smoothing}\n"
                     f"Frequency of target updates: {self.target_update_freq}\n\n"
                 )
@@ -141,7 +142,7 @@ class SACTrainerV2(SACTrainer):
         with torch.no_grad():
             q1s = self.qf1(states, sampled_actions)
             q2s = self.qf2(states, sampled_actions)
-            q_mean = torch.mean(q1s, q2s)
+            q_mean = torch.mean(torch.stack([q1s, q2s]))
         policy_loss = torch.mean(torch.exp(self.log_alpha).detach() * log_probs - q_mean)
 
         # gradient update:
@@ -178,4 +179,4 @@ class SACTrainerV2(SACTrainer):
         self._q_update(states, actions, next_states, rewards, dones)
         self._policy_update(states)
         self._alpha_update(states)
-        self._target_q_update()s
+        self._target_q_update()

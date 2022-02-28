@@ -48,6 +48,7 @@ SAC_CHEETAH.update(
 sac_base_v2 = {
     "seed": 42,
     "hidden_dim": 256,
+    "grad_steps": 1,
     "batch_size": 256,
     "replay_buffer_size": int(1e6),
     "min_replay_buffer_size": 1000,
