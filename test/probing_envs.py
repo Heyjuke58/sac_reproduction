@@ -11,6 +11,10 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class FloatDiscrete:
+    """
+    Like gym.spaces.Discrete, but converts the integer output into floats
+    """
+
     def __init__(self, n, start: int = 0):
         assert n > 0, "n (counts) have to be positive"
         assert isinstance(start, (int, np.integer))
@@ -27,7 +31,10 @@ class FloatDiscrete:
 
 
 class MinusPlusDiscrete:
-    # returns values of -1 or +1
+    """
+    returns values of -1 or +1
+    """
+
     def __init__(self) -> None:
         self.np_random, _ = seeding.np_random(None)
         self.shape = (1,)
@@ -41,6 +48,10 @@ class MinusPlusDiscrete:
 
 
 class Probe1(gym.Env):
+    """
+    One state, one action, always get +1 reward and done instantly.
+    """
+
     def __init__(self) -> None:
         super().__init__()
         self.action_space = FloatDiscrete(1)
@@ -54,6 +65,10 @@ class Probe1(gym.Env):
 
 
 class Probe2(gym.Env):
+    """
+    Two states, one action, get reward (+1, -1) based on state you get thrown in at the start. Done instantly.
+    """
+
     def __init__(self) -> None:
         super().__init__()
         self.action_space = FloatDiscrete(1)
@@ -75,6 +90,10 @@ class Probe2(gym.Env):
 
 
 class Probe3(gym.Env):
+    """
+    Two states, one action. Start in s_0, goto s_1, done. s_0 gives 0 reward, s_1 gives +1 reward.
+    """
+
     def __init__(self) -> None:
         super().__init__()
         self.action_space = FloatDiscrete(1)
@@ -86,7 +105,7 @@ class Probe3(gym.Env):
             self.state = 1.0
             return np.array([self.state]), 0, 0, {}
         elif self.state == 1.0:
-            # should never end up in this:
+            # should never end up in state 2 because done:
             self.state = 2.0
             return np.array([self.state]), 1, 1, {}
 
@@ -96,6 +115,10 @@ class Probe3(gym.Env):
 
 
 class Probe4(gym.Env):
+    """
+    One state, two actions. Reward (+1, -1) based on action. Done instantly.
+    """
+
     def __init__(self) -> None:
         super().__init__()
         self.action_space = MinusPlusDiscrete()
@@ -110,6 +133,11 @@ class Probe4(gym.Env):
 
 
 class Probe5(gym.Env):
+    """
+    Two states, two actions. Have to match action to state that you start in to get reward of +1,
+    otherwise get -1 reward. Done instantly.
+    """
+
     def __init__(self) -> None:
         super().__init__()
         self.action_space = MinusPlusDiscrete()

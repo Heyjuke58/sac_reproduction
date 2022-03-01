@@ -1,16 +1,19 @@
-from test import Tester, sample_tensors
+from test import Tester
 from src.hyperparameters import sac_base, sac_base_v2
 from src.sac_trainer import SACTrainer
+from src.sac_trainer_v2 import SACTrainerV2
 import torch
 from test.probing_envs import Probe1, Probe2, Probe3, Probe4, Probe5
 from parameterized import parameterized_class
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+
 @parameterized_class([{"sac_version": "v1"}, {"sac_version": "v2"}])
 class ProbingEnvs(Tester):
     def setUp(self) -> None:
         if self.sac_version == "v1":
+            self.sac_trainer = SACTrainer
             self.sac_hpars = sac_base.copy()
             self.sac_hpars.update(
                 {
@@ -27,8 +30,10 @@ class ProbingEnvs(Tester):
                 }
             )
         else:
+            self.sac_trainer = SACTrainerV2
             self.sac_hpars = sac_base_v2.copy()
-            self.sac_hpars.update({
+            self.sac_hpars.update(
+                {
                     "seed": 12,
                     "batch_size": 10,
                     "replay_buffer_size": 50,
@@ -38,30 +43,33 @@ class ProbingEnvs(Tester):
                     "file_name": "sac_v2",
                     "dest_model_path": "./test/models",
                     "dest_res_path": "./test/results",
-            })
-            
+                }
+            )
 
+        self.s_0 = torch.tensor([0.0], device=device).unsqueeze(0)
+        self.s_1 = torch.tensor([1.0], device=device).unsqueeze(0)
+        self.a_0 = torch.tensor([0.0], device=device).unsqueeze(0)
+        self.a_1 = torch.tensor([1.0], device=device).unsqueeze(0)
+        self.a_n1 = torch.tensor([-1.0], device=device).unsqueeze(0)
 
         return super().setUp()
 
     def test_probe_1(self):
         """
         Test probing env 1. This isolates the value loss calculation and the optimizer of the value network.
+        One action, one state, always get +1 reward and done instantly.
         """
         env = Probe1()
         sac_hpars_1 = self.sac_hpars.copy()
         sac_hpars_1.update({"env": env, "max_env_steps": 200, "max_action": 0})
-        sac = SACTrainer(**sac_hpars_1)
+        sac = self.sac_trainer(**sac_hpars_1)
         sac.train()
 
-        state, action, next_state, reward, done = sample_tensors(env)
-        self.assertAlmostEqual(sac.value(state).detach().cpu().item(), 1.0, places=3)
-        self.assertAlmostEqual(
-            sac.qf1(state, action.unsqueeze(0)).detach().cpu().item(), 1.0, places=3
-        )
-        self.assertAlmostEqual(
-            sac.qf2(state, action.unsqueeze(0)).detach().cpu().item(), 1.0, places=3
-        )
+        self.assertAlmostEqual(sac.qf1(self.s_0, self.a_0).item(), 1.0, delta=0.1)
+        self.assertAlmostEqual(sac.qf2(self.s_0, self.a_0).item(), 1.0, delta=0.1)
+
+        if self.sac_version == "v1":
+            self.assertAlmostEqual(sac.value(self.s_0).item(), 1.0, delta=0.1)
 
     def test_probe_2(self):
         """
@@ -70,31 +78,38 @@ class ProbingEnvs(Tester):
         env = Probe2()
         sac_hpars_2 = self.sac_hpars.copy()
         sac_hpars_2.update({"env": env, "max_env_steps": 500, "max_action": 0})
-        sac = SACTrainer(**sac_hpars_2)
+        sac = self.sac_trainer(**sac_hpars_2)
         sac.train()
 
-        s_0 = torch.tensor([0.0], device=device).unsqueeze(0)
-        s_1 = torch.tensor([1.0], device=device).unsqueeze(0)
-        a_0 = torch.tensor([0.0], device=device).unsqueeze(0)
-        self.assertAlmostEqual(sac.value(s_0).detach().cpu().item(), 0.0, places=3)
-        self.assertAlmostEqual(sac.value(s_1).detach().cpu().item(), 1.0, places=3)
-        self.assertAlmostEqual(sac.qf1(s_0, a_0).detach().cpu().item(), 0.0, places=3)
-        self.assertAlmostEqual(sac.qf1(s_1, a_0).detach().cpu().item(), 1.0, places=3)
+        self.assertAlmostEqual(sac.qf1(self.s_0, self.a_0).item(), 0.0, delta=0.1)
+        self.assertAlmostEqual(sac.qf1(self.s_1, self.a_0).item(), 1.0, delta=0.1)
+        self.assertAlmostEqual(sac.qf2(self.s_0, self.a_0).item(), 0.0, delta=0.1)
+        self.assertAlmostEqual(sac.qf2(self.s_1, self.a_0).item(), 1.0, delta=0.1)
+
+        if self.sac_version == "v1":
+            self.assertAlmostEqual(sac.value(self.s_0).item(), 0.0, delta=0.1)
+            self.assertAlmostEqual(sac.value(self.s_1).item(), 1.0, delta=0.1)
 
     def test_probe_3(self):
         """
-        Test probing env 3. Test whether reward discounting works.
+        Test probing env 3. Test whether reward discounting works. One action, two states.
         """
-        env = Probe3()
-        sac_hpars_3 = self.sac_hpars.copy()
-        sac_hpars_3.update({"env": env, "discount": 0.5, "max_env_steps": 2000, "max_action": 0})
-        sac = SACTrainer(**sac_hpars_3)
-        sac.train()
+        for seed in range(5):
+            env = Probe3()
+            sac_hpars_3 = self.sac_hpars.copy()
+            sac_hpars_3.update(
+                {"env": env, "discount": 0.5, "max_env_steps": 2000, "max_action": 0, "seed": seed}
+            )
+            sac = self.sac_trainer(**sac_hpars_3)
+            sac.train()
 
-        s_0 = torch.tensor([0.0], device=device)
-        s_1 = torch.tensor([1.0], device=device)
-        self.assertAlmostEqual(sac.value(s_0).detach().cpu().item(), 0.5, places=3)
-        self.assertAlmostEqual(sac.value(s_1).detach().cpu().item(), 1.0, places=3)
+            for qf in [sac.qf1, sac.qf2]:
+                self.assertAlmostEqual(qf(self.s_0, self.a_0).item(), 0.5, delta=0.1)
+                self.assertAlmostEqual(qf(self.s_1, self.a_0).item(), 1.0, delta=0.1)
+
+            if self.sac_version == "v1":
+                self.assertAlmostEqual(sac.value(self.s_0).item(), 0.5, delta=0.1)
+                self.assertAlmostEqual(sac.value(self.s_1).item(), 1.0, delta=0.1)
 
     def test_probe_4(self):
         """
@@ -103,21 +118,19 @@ class ProbingEnvs(Tester):
         env = Probe4()
         sac_hpars_4 = self.sac_hpars.copy()
         sac_hpars_4.update({"env": env, "max_env_steps": 2000, "max_action": 1})
-        sac = SACTrainer(**sac_hpars_4)
+        sac = self.sac_trainer(**sac_hpars_4)
         sac.train()
 
-        s_0 = torch.tensor([0.0], device=device).unsqueeze(0)
-        action, _ = sac.policy(s_0, deterministic=True)
-        action = 0.0 if action.detach().cpu().item() <= 0 else 1.0
-        self.assertAlmostEqual(sac.value(s_0).detach().cpu().item(), 1.0, delta=0.1)
+        action, _ = sac.policy(self.s_0, deterministic=True)
+        action = 0.0 if action.item() <= 0 else 1.0
         self.assertEqual(action, 1.0)
 
-        a_1 = torch.tensor([1.0], device=device).unsqueeze(0)
-        self.assertAlmostEqual(sac.qf1(s_0, a_1).detach().cpu().item(), 1.0, delta=0.1)
-        self.assertAlmostEqual(sac.qf2(s_0, a_1).detach().cpu().item(), 1.0, delta=0.1)
-        # cannot test OOD actions:
-        # self.assertAlmostEqual(sac.qf1(s_0, a_0).detach().cpu().item(), 0.0, delta=0.1)
-        # self.assertAlmostEqual(sac.qf2(s_0, a_0).detach().cpu().item(), 0.0, delta=0.1)
+        for qf in [sac.qf1, sac.qf2]:
+            self.assertAlmostEqual(qf(self.s_0, self.a_1).item(), 1.0, delta=0.1)
+            self.assertGreater(qf(self.s_0, self.a_1).item(), qf(self.s_0, self.a_0))
+
+        if self.sac_version == "v1":
+            self.assertAlmostEqual(sac.value(self.s_0).item(), 1.0, delta=0.1)
 
     def test_probe_5(self):
         """
@@ -126,26 +139,26 @@ class ProbingEnvs(Tester):
         env = Probe5()
         sac_hpars_5 = self.sac_hpars.copy()
         sac_hpars_5.update({"env": env, "max_env_steps": 2000, "max_action": 1})
-        sac = SACTrainer(**sac_hpars_5)
+        sac = self.sac_trainer(**sac_hpars_5)
         sac.train()
 
-        s_0 = torch.tensor([0.0], device=device).unsqueeze(0)
-        s_1 = torch.tensor([1.0], device=device).unsqueeze(0)
-        a_0, _ = sac.policy(s_0, deterministic=True)
-        a_1, _ = sac.policy(s_1, deterministic=True)
-        a_0 = -1.0 if a_0.detach().cpu().item() <= 0 else 1.0
-        a_1 = -1.0 if a_1.detach().cpu().item() <= 0 else 1.0
+        p_0, _ = sac.policy(self.s_0, deterministic=True)
+        p_1, _ = sac.policy(self.s_1, deterministic=True)
+        p_0 = -1.0 if p_0.item() <= 0 else 1.0
+        p_1 = -1.0 if p_1.item() <= 0 else 1.0
 
-        # check V
-        self.assertAlmostEqual(sac.value(s_0).detach().cpu().item(), 1.0, delta=0.1)
-        self.assertAlmostEqual(sac.value(s_1).detach().cpu().item(), 1.0, delta=0.1)
         # check Policy
-        self.assertEqual(a_0, -1.0)
-        self.assertEqual(a_1, 1.0)
+        self.assertEqual(p_0, -1.0)
+        self.assertEqual(p_1, 1.0)
+
         # check in-distribution Q
-        a_0 = torch.tensor([-1.0], device=device).unsqueeze(0)
-        a_1 = torch.tensor([1.0], device=device).unsqueeze(0)
-        self.assertAlmostEqual(sac.qf1(s_0, a_0).detach().cpu().item(), 1.0, delta=0.1)
-        self.assertAlmostEqual(sac.qf1(s_1, a_1).detach().cpu().item(), 1.0, delta=0.1)
-        self.assertAlmostEqual(sac.qf2(s_0, a_0).detach().cpu().item(), 1.0, delta=0.1)
-        self.assertAlmostEqual(sac.qf2(s_1, a_1).detach().cpu().item(), 1.0, delta=0.1)
+        for qf in [sac.qf1, sac.qf2]:
+            self.assertAlmostEqual(qf(self.s_0, self.a_n1).item(), 1.0, delta=0.1)
+            self.assertAlmostEqual(qf(self.s_1, self.a_1).item(), 1.0, delta=0.1)
+            self.assertGreater(qf(self.s_0, self.a_n1).item(), qf(self.s_0, self.a_1))
+            self.assertGreater(qf(self.s_1, self.a_1).item(), qf(self.s_1, self.a_n1))
+
+        if self.sac_version == "v1":
+            # check V
+            self.assertAlmostEqual(sac.value(self.s_0).item(), 1.0, delta=0.1)
+            self.assertAlmostEqual(sac.value(self.s_1).item(), 1.0, delta=0.1)
