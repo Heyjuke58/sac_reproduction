@@ -58,6 +58,7 @@ class Policy(nn.Module):
             normal = Normal(mus, torch.exp(log_sigmas))
             actions = normal.rsample()  # (b, action space dim)
             log_probs = normal.log_prob(actions)  # (b, action space dim)
+            log_probs = torch.sum(log_probs, dim=1)  # like in tf, we want one value (b, 1)
             log_probs -= self._correction(actions).unsqueeze(0).T
             if self.max_action == 0.0:  # only for debugging
                 log_probs *= 0.0

@@ -5,6 +5,17 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Main_SAC",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/main.py",
+            "args": [
+                "--sac=sac_cheetah",
+                "--seed=12",
+            ],
+            "console": "integratedTerminal"
+        },
+        {
             "name": "Plot",
             "type": "python",
             "request": "launch",
@@ -15,12 +26,12 @@
             "console": "integratedTerminal"
         },
         {
-            "name": "Main",
+            "name": "Main_SAC_v2",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/main.py",
             "args": [
-                "--td3=td3_cheetah",
+                "--sac-v2=sac_v2_cheetah",
                 "--seed=12",
             ],
             "console": "integratedTerminal"
