@@ -102,6 +102,8 @@ class SACTrainer:
         self.file_name = file_name
         self.dest_model_path = f"{dest_model_path}/{self.file_name}"
         self.res_file = f"{dest_res_path}/{self.file_name}.csv"
+        self.avg_log_probs = 0.0
+        self.log_probs_num = 0
 
         # Create log file if it does not exist already
         if not os.path.exists(self.res_file):
@@ -123,7 +125,7 @@ class SACTrainer:
                     f"Frequency of target updates: {self.target_update_freq}\n\n"
                 )
                 csv_f.write(hyperpars_str)
-                csv_f.write("avg_reward,time,env_steps,grad_steps,seed\n")
+                csv_f.write("avg_reward,avg_log_probs,time,env_steps,grad_steps,seed\n")
 
         # logged things
         self.elapsed_grad_steps = 0
@@ -244,11 +246,13 @@ class SACTrainer:
             action = self.env.action_space.sample()
         else:
             with torch.no_grad():  # TODO maybe needs to be detach()?
-                action, _ = self.policy(
+                action, (log_probs, _, _) = self.policy(
                     torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0),
                     deterministic=False,
                 )
                 action = action.detach().cpu().numpy()
+                self.log_probs_num += 1
+                self.avg_log_probs += log_probs.item()
 
         next_state, reward, done, info = self.env.step(action)
         self.episode_reward += reward
@@ -321,7 +325,10 @@ class SACTrainer:
     def write_eval_to_csv(self, avg_reward, time, env_steps):
         with open(self.res_file, "a") as csv_f:
             writer = csv.writer(csv_f, delimiter=",")
-            writer.writerow([avg_reward, time, env_steps, self.elapsed_grad_steps, self.seed])
+            writer.writerow([avg_reward, 'nan' if self.log_probs_num == 0 else self.avg_log_probs / self.log_probs_num, time, env_steps, self.elapsed_grad_steps, self.seed])
+        # reset log probs metrics
+        self.avg_log_probs = 0.0
+        self.log_probs_num = 0
 
     def save(self, filename: str):
         torch.save(self.policy, filename + "_policy")
