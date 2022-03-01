@@ -1,29 +1,46 @@
 from test import Tester, sample_tensors
-from src.hyperparameters import sac_base
+from src.hyperparameters import sac_base, sac_base_v2
 from src.sac_trainer import SACTrainer
 import torch
 from test.probing_envs import Probe1, Probe2, Probe3, Probe4, Probe5
+from parameterized import parameterized_class
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-
+@parameterized_class([{"sac_version": "v1"}, {"sac_version": "v2"}])
 class ProbingEnvs(Tester):
     def setUp(self) -> None:
-        self.sac_hpars = sac_base.copy()
-        self.sac_hpars.update(
-            {
-                "seed": 12,
-                "batch_size": 10,
-                "replay_buffer_size": 50,
-                "min_replay_buffer_size": 10,
-                "eval_freq": 100,
-                "n_initial_exploration_steps": 0,
-                "scale_reward": 1,
-                "file_name": "sac",
-                "dest_model_path": "./test/models",
-                "dest_res_path": "./test/results",
-            }
-        )
+        if self.sac_version == "v1":
+            self.sac_hpars = sac_base.copy()
+            self.sac_hpars.update(
+                {
+                    "seed": 12,
+                    "batch_size": 10,
+                    "replay_buffer_size": 50,
+                    "min_replay_buffer_size": 10,
+                    "eval_freq": 100,
+                    "n_initial_exploration_steps": 0,
+                    "scale_reward": 1,
+                    "file_name": "sac",
+                    "dest_model_path": "./test/models",
+                    "dest_res_path": "./test/results",
+                }
+            )
+        else:
+            self.sac_hpars = sac_base_v2.copy()
+            self.sac_hpars.update({
+                    "seed": 12,
+                    "batch_size": 10,
+                    "replay_buffer_size": 50,
+                    "min_replay_buffer_size": 10,
+                    "eval_freq": 100,
+                    "n_initial_exploration_steps": 0,
+                    "file_name": "sac_v2",
+                    "dest_model_path": "./test/models",
+                    "dest_res_path": "./test/results",
+            })
+            
+
 
         return super().setUp()
 

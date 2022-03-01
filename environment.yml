@@ -9,6 +9,7 @@ dependencies:
   - seaborn=0.11.2
   - scipy=1.8.0
   - numpy=1.22.2
+  - parameterized=0.8.1
   - pip=22.0.3
   - pip:
     - gym==0.21.0
