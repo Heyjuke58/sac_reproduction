@@ -73,3 +73,15 @@ class WeightUpdateTester(Tester):
         self.assertFalse(models_equal(sac_before.target_value, self.sac.target_value))
         self.assertTrue(models_equal(sac_before.qf1, self.sac.qf1))
         self.assertTrue(models_equal(sac_before.qf2, self.sac.qf2))
+
+    def test_value_and_policy_update(self):
+        sac_before = copy.deepcopy(self.sac)
+        state, action, next_state, reward, done = sample_tensors(self.sac.env)
+
+        self.sac._value_and_policy_update(state)
+
+        self.assertFalse(models_equal(sac_before.value, self.sac.value))
+        self.assertFalse(models_equal(sac_before.policy, self.sac.policy))
+        self.assertTrue(models_equal(sac_before.target_value, self.sac.target_value))
+        self.assertTrue(models_equal(sac_before.qf1, self.sac.qf1))
+        self.assertTrue(models_equal(sac_before.qf2, self.sac.qf2))
