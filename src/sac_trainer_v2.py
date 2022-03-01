@@ -61,7 +61,7 @@ class SACTrainerV2(SACTrainer):
         action_dim = self.env.action_space.shape[0]
         self.qf1 = Q(state_dim, action_dim, hidden_dim, adam_kwargs).to(device)
         self.qf2 = Q(state_dim, action_dim, hidden_dim, adam_kwargs).to(device)
-        self.policy = Policy(state_dim, action_dim, hidden_dim, 1, adam_kwargs).to(device)
+        self.policy = Policy(state_dim, action_dim, hidden_dim, 1, adam_kwargs, version='v2').to(device)
         self.target_qf1 = deepcopy(self.qf1)
         self.target_qf2 = deepcopy(self.qf2)
 
@@ -121,7 +121,7 @@ class SACTrainerV2(SACTrainer):
             next_q2 = self.target_qf2(next_states, sampled_actions)
             next_q = torch.minimum(next_q1, next_q2)
 
-            next_values = next_q - torch.exp(self.log_alpha) * log_probs
+            next_values = next_q - torch.exp(self.log_alpha) * log_probs.unsqueeze(-1)
 
             q_targets = rewards + self.discount * (1.0 - dones) * next_values
 
@@ -142,8 +142,8 @@ class SACTrainerV2(SACTrainer):
         with torch.no_grad():
             q1s = self.qf1(states, sampled_actions)
             q2s = self.qf2(states, sampled_actions)
-            q_mean = torch.mean(torch.stack([q1s, q2s]))
-        policy_loss = torch.mean(torch.exp(self.log_alpha).detach() * log_probs - q_mean)
+            q_mean = torch.mean(torch.stack([q1s, q2s]), dim=0)
+        policy_loss = torch.mean(torch.exp(self.log_alpha).detach() * log_probs.unsqueeze(-1) - q_mean)
 
         # gradient update:
         self.policy.optimizer.zero_grad()

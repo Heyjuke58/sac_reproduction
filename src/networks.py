@@ -21,6 +21,7 @@ class Policy(nn.Module):
         hidden_dim: int,
         max_action: float,
         adam_kwargs: dict[str, Any],
+        version: str,
     ):
         super(Policy, self).__init__()
 
@@ -33,6 +34,10 @@ class Policy(nn.Module):
         self.max_action = max_action
 
         self.optimizer = torch.optim.Adam(self.parameters(), **adam_kwargs)
+        
+        # V1 and V2 of SAC use slightly different policy models
+        assert version in ["v1", "v2"]
+        self.version = version
 
     def forward(
         self, state: Tensor, deterministic: bool
@@ -48,8 +53,13 @@ class Policy(nn.Module):
         mus = h[:, : self.action_dim]
         log_sigmas = h[:, self.action_dim :]
 
-        # clip log sigmas
-        log_sigmas = torch.clamp(log_sigmas, min=LOG_SIG_MIN, max=LOG_SIG_MAX)
+        if self.version == 'v1':
+            # clip log sigmas
+            log_sigmas = torch.clamp(log_sigmas, min=LOG_SIG_MIN, max=LOG_SIG_MAX)
+        elif self.version == 'v2':
+            # apply softplus and add epsilon
+            # https://github.com/rail-berkeley/softlearning/blob/master/softlearning/policies/gaussian_policy.py line 276
+            log_sigmas = torch.nn.Softplus()(log_sigmas) + 1e-5
 
         if deterministic:
             return self.max_action * tanh(mus), None

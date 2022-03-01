@@ -81,7 +81,7 @@ class SACTrainer:
         self.target_value = deepcopy(self.value)
         self.qf1 = Q(state_dim, action_dim, hidden_dim, adam_kwargs).to(device)
         self.qf2 = Q(state_dim, action_dim, hidden_dim, adam_kwargs).to(device)
-        self.policy = Policy(state_dim, action_dim, hidden_dim, max_action, adam_kwargs).to(device)
+        self.policy = Policy(state_dim, action_dim, hidden_dim, max_action, adam_kwargs, version='v1').to(device)
 
         # Other hyperparameters
         self.batch_size = batch_size
