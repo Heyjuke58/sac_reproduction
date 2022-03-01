@@ -180,3 +180,6 @@ class SACTrainerV2(SACTrainer):
         self._policy_update(states)
         self._alpha_update(states)
         self._target_q_update()
+
+    def _log_updates(self):
+        pass
