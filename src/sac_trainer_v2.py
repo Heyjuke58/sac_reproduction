@@ -41,6 +41,7 @@ class SACTrainerV2(SACTrainer):
         adam_kwargs: dict,
         dest_model_path: str = "./models",
         dest_res_path: str = "./results",
+        max_action: float = 1.0,
     ) -> None:
         # Make env
         if isinstance(env, str):
@@ -61,7 +62,9 @@ class SACTrainerV2(SACTrainer):
         action_dim = self.env.action_space.shape[0]
         self.qf1 = Q(state_dim, action_dim, hidden_dim, adam_kwargs).to(device)
         self.qf2 = Q(state_dim, action_dim, hidden_dim, adam_kwargs).to(device)
-        self.policy = Policy(state_dim, action_dim, hidden_dim, 1, adam_kwargs, version='v2').to(device)
+        self.policy = Policy(
+            state_dim, action_dim, hidden_dim, max_action, adam_kwargs, version="v2"
+        ).to(device)
         self.target_qf1 = deepcopy(self.qf1)
         self.target_qf2 = deepcopy(self.qf2)
 
@@ -143,7 +146,9 @@ class SACTrainerV2(SACTrainer):
             q1s = self.qf1(states, sampled_actions)
             q2s = self.qf2(states, sampled_actions)
             q_mean = torch.mean(torch.stack([q1s, q2s]), dim=0)
-        policy_loss = torch.mean(torch.exp(self.log_alpha).detach() * log_probs.unsqueeze(-1) - q_mean)
+        policy_loss = torch.mean(
+            torch.exp(self.log_alpha).detach() * log_probs.unsqueeze(-1) - q_mean
+        )
 
         # gradient update:
         self.policy.optimizer.zero_grad()
