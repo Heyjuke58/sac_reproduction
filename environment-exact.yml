@@ -58,6 +58,7 @@ dependencies:
   - openssl=3.0.0=h7f98852_2
   - packaging=21.3=pyhd8ed1ab_0
   - pandas=1.4.1=py39hde0f152_0
+  - parameterized=0.8.1=pyhd3deb0d_0
   - patsy=0.5.2=pyhd8ed1ab_0
   - pillow=9.0.1=py39hae2aec6_2
   - pip=22.0.3=pyhd8ed1ab_0
