@@ -1,6 +1,5 @@
 from numpy import ndarray
 import torch
-from src.networks import Policy
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

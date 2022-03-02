@@ -1,7 +1,7 @@
 from typing import Optional
 from collections import OrderedDict
 from src.sac_trainer import SACTrainer
-from src.networks import Q, PolicyV2
+from src.networks import Q, Policy
 import torch
 import gym
 from typing import Union
@@ -65,9 +65,9 @@ class SACTrainerV2(SACTrainer):
         action_dim = self.env.action_space.shape[0]
         self.qf1 = Q(state_dim, action_dim, hidden_dim, adam_kwargs).to(device)
         self.qf2 = Q(state_dim, action_dim, hidden_dim, adam_kwargs).to(device)
-        self.policy = PolicyV2(state_dim, action_dim, hidden_dim, max_action, adam_kwargs).to(
-            device
-        )
+        self.policy = Policy(
+            state_dim, action_dim, hidden_dim, max_action, adam_kwargs, "softplus"
+        ).to(device)
         self.target_qf1 = deepcopy(self.qf1)
         self.target_qf2 = deepcopy(self.qf2)
 

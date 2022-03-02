@@ -15,22 +15,12 @@
 - wir benutzen eine neuere Version von MuJoCo
 
 - in v2: im Code wurde im neuesten Commit auf mean(Q1, Q2) anstatt min(Q1, Q2) gesetzt, und zwar nur im Policy update.
+- in v2: policy benutzt softplus anstelle von clamping
 
 # Logging
 - Sollte Zeit (timestamps) und env steps enthalten um nach Zeit und Sampling Effizienz zu unterscheiden.
 - Hyperparameter settings sollen am Anfang der csv auftauchen, muss beim Einlesen der Daten beachtet werden!
 - Verschiedene runs werden in einer csv gespeichert und können über die Spalte 'seed' voneinander unterschieden werden.
-
-# Fragen
-
-- animationen in der präsentation? wie am besten?
-- installation von mujoco erklären? welches OS?
-
-# TODO
-
-- eval für sac (daten speichern)
-- tests für sac
-- plotten
 
 # RUNS TODO:
 
@@ -41,6 +31,9 @@ Hauke:
 ## Time for runs
 
 - Konrad:
+    - Cheetah * 3: 3.5h
+    - Hopper * 3: 2.5h
+    - need: SAC, SAC_V2, SAC_V2_FIXED_ALPHA * 4
     - SAC V1:
         - Cheetah, 1M env steps: 1.6h
         - Cheetah, 1.5M env steps: 2.5h
@@ -56,7 +49,5 @@ Hauke:
         - erstmal nicht
 - Hauke:
     - TD3:
-        - 3x TD3 Hopper 1M env steps (1.8h each) -> 5.5h
+        - 3x TD3 Hopper 1M env steps (1.8h each) -> 5.5h done!
         - 3x TD3 Cheetah 1.5M env steps (~4h each) -> 12h
-
-## Checklist

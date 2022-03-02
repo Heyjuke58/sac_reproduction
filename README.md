@@ -3,7 +3,7 @@ Reproduction of SAC from scratch [[Haarnoja et al.]](https://arxiv.org/pdf/1801.
 
 # Setup
 
-- Install MuJoCo ([Instructions](https://github.com/openai/mujoco-py)) 
+- Install MuJoCo ([Instructions (See "Install MuJoCo")](https://github.com/openai/mujoco-py#install-mujoco))
 
 Specifically for Ubuntu:
 1. Download the MuJoCo version 2.1.0 binaries for [Linux](https://mujoco.org/download/mujoco210-linux-x86_64.tar.gz)
@@ -34,7 +34,7 @@ python main.py --td3=<td3_env> --seed=<seed>
 ```
 
 Seed is optional, default seed is given in `src/hyperparameters.py`.
-Possible SAC envs: `{SAC_HOPPER, SAC_CHEETAH}`.
+Possible SAC envs: `{SAC_HOPPER, SAC_CHEETAH, SAC_HOPPER_FIXED_ALPHA, SAC_CHEETAH_FIXED_ALPHA}`.
 Possible TD3 envs: `{TD3_HOPPER, TD3_CHEETAH}`.
 
 # Render a Learned Policy

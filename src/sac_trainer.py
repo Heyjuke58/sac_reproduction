@@ -13,7 +13,6 @@ from torch import Tensor
 
 from src.utils import set_seeds
 from src.networks import Policy, Value, Q
-from src.utils import get_timestamp
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -57,7 +56,7 @@ class SACTrainer:
         :param n_initial_exploration_steps:
         :param scale_reward:
         :param max_env_steps:
-        :param adam_kwargs:
+        :param adam_kwargs: keyword arguments for adam optimizer (same for all nets)
         """
         # Make env
         if isinstance(env, str):
@@ -82,7 +81,7 @@ class SACTrainer:
         self.qf1 = Q(state_dim, action_dim, hidden_dim, adam_kwargs).to(device)
         self.qf2 = Q(state_dim, action_dim, hidden_dim, adam_kwargs).to(device)
         self.policy = Policy(
-            state_dim, action_dim, hidden_dim, max_action, adam_kwargs, version="v1"
+            state_dim, action_dim, hidden_dim, max_action, adam_kwargs, "clamp"
         ).to(device)
 
         # Other hyperparameters
