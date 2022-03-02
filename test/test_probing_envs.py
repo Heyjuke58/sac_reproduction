@@ -115,50 +115,52 @@ class ProbingEnvs(Tester):
         """
         Test probing env 4. Test whether policy can learn to pick a better action.
         """
-        env = Probe4()
-        sac_hpars_4 = self.sac_hpars.copy()
-        sac_hpars_4.update({"env": env, "max_env_steps": 2000, "max_action": 1})
-        sac = self.sac_trainer(**sac_hpars_4)
-        sac.train()
+        for seed in range(5):
+            env = Probe4()
+            sac_hpars_4 = self.sac_hpars.copy()
+            sac_hpars_4.update({"env": env, "max_env_steps": 2000, "max_action": 1, "seed": seed})
+            sac = self.sac_trainer(**sac_hpars_4)
+            sac.train()
 
-        action, _ = sac.policy(self.s_0, deterministic=True)
-        action = 0.0 if action.item() <= 0 else 1.0
-        self.assertEqual(action, 1.0)
+            action, _ = sac.policy(self.s_0, deterministic=True)
+            action = 0.0 if action.item() <= 0 else 1.0
+            self.assertEqual(action, 1.0)
 
-        for qf in [sac.qf1, sac.qf2]:
-            self.assertAlmostEqual(qf(self.s_0, self.a_1).item(), 1.0, delta=0.1)
-            self.assertGreater(qf(self.s_0, self.a_1).item(), qf(self.s_0, self.a_0))
+            for qf in [sac.qf1, sac.qf2]:
+                self.assertAlmostEqual(qf(self.s_0, self.a_1).item(), 1.0, delta=0.1)
+                self.assertGreater(qf(self.s_0, self.a_1).item(), qf(self.s_0, self.a_0))
 
-        if self.sac_version == "v1":
-            self.assertAlmostEqual(sac.value(self.s_0).item(), 1.0, delta=0.1)
+            if self.sac_version == "v1":
+                self.assertAlmostEqual(sac.value(self.s_0).item(), 1.0, delta=0.1)
 
     def test_probe_5(self):
         """
         State is either 0 or 1, need to take action -1 in state 0 and 1 in state 1.
         """
-        env = Probe5()
-        sac_hpars_5 = self.sac_hpars.copy()
-        sac_hpars_5.update({"env": env, "max_env_steps": 2000, "max_action": 1})
-        sac = self.sac_trainer(**sac_hpars_5)
-        sac.train()
+        for seed in range(5):
+            env = Probe5()
+            sac_hpars_5 = self.sac_hpars.copy()
+            sac_hpars_5.update({"env": env, "max_env_steps": 2000, "max_action": 1, "seed": seed})
+            sac = self.sac_trainer(**sac_hpars_5)
+            sac.train()
 
-        p_0, _ = sac.policy(self.s_0, deterministic=True)
-        p_1, _ = sac.policy(self.s_1, deterministic=True)
-        p_0 = -1.0 if p_0.item() <= 0 else 1.0
-        p_1 = -1.0 if p_1.item() <= 0 else 1.0
+            p_0, _ = sac.policy(self.s_0, deterministic=True)
+            p_1, _ = sac.policy(self.s_1, deterministic=True)
+            p_0 = -1.0 if p_0.item() <= 0 else 1.0
+            p_1 = -1.0 if p_1.item() <= 0 else 1.0
 
-        # check Policy
-        self.assertEqual(p_0, -1.0)
-        self.assertEqual(p_1, 1.0)
+            # check Policy
+            self.assertEqual(p_0, -1.0)
+            self.assertEqual(p_1, 1.0)
 
-        # check in-distribution Q
-        for qf in [sac.qf1, sac.qf2]:
-            self.assertAlmostEqual(qf(self.s_0, self.a_n1).item(), 1.0, delta=0.1)
-            self.assertAlmostEqual(qf(self.s_1, self.a_1).item(), 1.0, delta=0.1)
-            self.assertGreater(qf(self.s_0, self.a_n1).item(), qf(self.s_0, self.a_1))
-            self.assertGreater(qf(self.s_1, self.a_1).item(), qf(self.s_1, self.a_n1))
+            # check in-distribution Q
+            for qf in [sac.qf1, sac.qf2]:
+                self.assertAlmostEqual(qf(self.s_0, self.a_n1).item(), 1.0, delta=0.2)
+                self.assertAlmostEqual(qf(self.s_1, self.a_1).item(), 1.0, delta=0.2)
+                self.assertGreater(qf(self.s_0, self.a_n1).item(), qf(self.s_0, self.a_1))
+                self.assertGreater(qf(self.s_1, self.a_1).item(), qf(self.s_1, self.a_n1))
 
-        if self.sac_version == "v1":
-            # check V
-            self.assertAlmostEqual(sac.value(self.s_0).item(), 1.0, delta=0.1)
-            self.assertAlmostEqual(sac.value(self.s_1).item(), 1.0, delta=0.1)
+            if self.sac_version == "v1":
+                # check V
+                self.assertAlmostEqual(sac.value(self.s_0).item(), 1.0, delta=0.1)
+                self.assertAlmostEqual(sac.value(self.s_1).item(), 1.0, delta=0.1)

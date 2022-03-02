@@ -81,7 +81,9 @@ class SACTrainer:
         self.target_value = deepcopy(self.value)
         self.qf1 = Q(state_dim, action_dim, hidden_dim, adam_kwargs).to(device)
         self.qf2 = Q(state_dim, action_dim, hidden_dim, adam_kwargs).to(device)
-        self.policy = Policy(state_dim, action_dim, hidden_dim, max_action, adam_kwargs, version='v1').to(device)
+        self.policy = Policy(
+            state_dim, action_dim, hidden_dim, max_action, adam_kwargs, version="v1"
+        ).to(device)
 
         # Other hyperparameters
         self.batch_size = batch_size
@@ -168,12 +170,11 @@ class SACTrainer:
         self.policy.optimizer.step()
 
         values = self.value(states)  # (b, 1)
-        with torch.no_grad():
-            q1s = self.qf1(states, sampled_actions)
-            q2s = self.qf2(states, sampled_actions)
-            q_mins = torch.minimum(q1s, q2s)  # (b, 1)
+
+        q2s = self.qf2(states, sampled_actions)
+        q_mins = torch.minimum(q1s, q2s)  # (b, 1)
         log_probs = log_probs.detach()
-        value_loss = torch.mean(0.5 * (values - (q_mins - log_probs)) ** 2)
+        value_loss = torch.mean(0.5 * (values - (q_mins.detach() - log_probs)) ** 2)
 
         # gradient update:
         self.value.optimizer.zero_grad()
@@ -325,7 +326,16 @@ class SACTrainer:
     def write_eval_to_csv(self, avg_reward, time, env_steps):
         with open(self.res_file, "a") as csv_f:
             writer = csv.writer(csv_f, delimiter=",")
-            writer.writerow([avg_reward, 'nan' if self.log_probs_num == 0 else self.avg_log_probs / self.log_probs_num, time, env_steps, self.elapsed_grad_steps, self.seed])
+            writer.writerow(
+                [
+                    avg_reward,
+                    "nan" if self.log_probs_num == 0 else self.avg_log_probs / self.log_probs_num,
+                    time,
+                    env_steps,
+                    self.elapsed_grad_steps,
+                    self.seed,
+                ]
+            )
         # reset log probs metrics
         self.avg_log_probs = 0.0
         self.log_probs_num = 0

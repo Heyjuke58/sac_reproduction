@@ -1,6 +1,7 @@
+from typing import Optional
 from collections import OrderedDict
 from src.sac_trainer import SACTrainer
-from src.networks import Q, Policy
+from src.networks import Q, PolicyV2
 import torch
 import gym
 from typing import Union
@@ -9,6 +10,7 @@ from src.replay_buffer import ReplayBuffer
 from src.utils import set_seeds
 import os
 from torch import Tensor
+import csv
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -42,6 +44,7 @@ class SACTrainerV2(SACTrainer):
         dest_model_path: str = "./models",
         dest_res_path: str = "./results",
         max_action: float = 1.0,
+        fixed_alpha: Optional[float] = None,
     ) -> None:
         # Make env
         if isinstance(env, str):
@@ -62,16 +65,25 @@ class SACTrainerV2(SACTrainer):
         action_dim = self.env.action_space.shape[0]
         self.qf1 = Q(state_dim, action_dim, hidden_dim, adam_kwargs).to(device)
         self.qf2 = Q(state_dim, action_dim, hidden_dim, adam_kwargs).to(device)
-        self.policy = Policy(
-            state_dim, action_dim, hidden_dim, max_action, adam_kwargs, version="v2"
-        ).to(device)
+        self.policy = PolicyV2(state_dim, action_dim, hidden_dim, max_action, adam_kwargs).to(
+            device
+        )
         self.target_qf1 = deepcopy(self.qf1)
         self.target_qf2 = deepcopy(self.qf2)
 
         # alpha temperature
-        self.log_alpha = torch.tensor(0.0, device=device, requires_grad=True)
-        self.log_alpha_optim = torch.optim.Adam([self.log_alpha], **adam_kwargs)
-        self.target_entropy = -action_dim
+        if fixed_alpha is None:  # learn alpha
+            self.log_alpha = torch.tensor(0.0, device=device, requires_grad=True)
+            self.log_alpha_optim = torch.optim.Adam([self.log_alpha], **adam_kwargs)
+            self.target_entropy = -action_dim
+            self.fixed_alpha = False
+        else:  # alpha is a fixed hyperparameter
+            self.log_alpha = torch.log(
+                torch.tensor(fixed_alpha, device=device, requires_grad=False)
+            )
+            self.log_alpha_optim = None
+            self.target_entropy = None
+            self.fixed_alpha = True
 
         # Other hyperparameters
         self.batch_size = batch_size
@@ -90,6 +102,8 @@ class SACTrainerV2(SACTrainer):
         self.file_name = file_name
         self.dest_model_path = f"{dest_model_path}/{self.file_name}"
         self.res_file = f"{dest_res_path}/{self.file_name}.csv"
+        self.avg_log_probs = 0.0
+        self.log_probs_num = 0
 
         # Create log file if it does not exist already
         if not os.path.exists(self.res_file):
@@ -107,10 +121,11 @@ class SACTrainerV2(SACTrainer):
                     f"Discount factor: {self.discount}\n"
                     f"Target entropy: {self.target_entropy}\n"
                     f"Target network update smoothing (τ): {self.target_smoothing}\n"
+                    f"Fixed alpha: {fixed_alpha}\n"
                     f"Frequency of target updates: {self.target_update_freq}\n\n"
                 )
                 csv_f.write(hyperpars_str)
-                csv_f.write("avg_reward,time,env_steps,grad_steps,seed\n")
+                csv_f.write("avg_reward,log_probs,alpha,time,env_steps,grad_steps,seed\n")
 
         # logged things
         self.elapsed_grad_steps = 0
@@ -124,7 +139,7 @@ class SACTrainerV2(SACTrainer):
             next_q2 = self.target_qf2(next_states, sampled_actions)
             next_q = torch.minimum(next_q1, next_q2)
 
-            next_values = next_q - torch.exp(self.log_alpha) * log_probs.unsqueeze(-1)
+            next_values = next_q - torch.exp(self.log_alpha) * log_probs
 
             q_targets = rewards + self.discount * (1.0 - dones) * next_values
 
@@ -142,13 +157,11 @@ class SACTrainerV2(SACTrainer):
         # all: (b, |action_space|)
         sampled_actions, (log_probs, mus, log_sigmas) = self.policy(states, deterministic=False)
 
-        with torch.no_grad():
-            q1s = self.qf1(states, sampled_actions)
-            q2s = self.qf2(states, sampled_actions)
-            q_mean = torch.mean(torch.stack([q1s, q2s]), dim=0)
-        policy_loss = torch.mean(
-            torch.exp(self.log_alpha).detach() * log_probs.unsqueeze(-1) - q_mean
-        )
+        # with torch.no_grad():
+        q1s = self.qf1(states, sampled_actions)
+        q2s = self.qf2(states, sampled_actions)
+        q_mean = torch.mean(torch.stack([q1s, q2s]), dim=0)
+        policy_loss = torch.mean(torch.exp(self.log_alpha).detach() * log_probs - q_mean)
 
         # gradient update:
         self.policy.optimizer.zero_grad()
@@ -183,8 +196,27 @@ class SACTrainerV2(SACTrainer):
     def _do_updates(self, states, actions, next_states, rewards, dones) -> None:
         self._q_update(states, actions, next_states, rewards, dones)
         self._policy_update(states)
-        self._alpha_update(states)
+        if not self.fixed_alpha:
+            self._alpha_update(states)
         self._target_q_update()
 
     def _log_updates(self):
         pass
+
+    def write_eval_to_csv(self, avg_reward, time, env_steps):
+        with open(self.res_file, "a") as csv_f:
+            writer = csv.writer(csv_f, delimiter=",")
+            writer.writerow(
+                [
+                    avg_reward,
+                    "nan" if self.log_probs_num == 0 else self.avg_log_probs / self.log_probs_num,
+                    torch.exp(self.log_alpha).item(),
+                    time,
+                    env_steps,
+                    self.elapsed_grad_steps,
+                    self.seed,
+                ]
+            )
+        # reset log probs metrics
+        self.avg_log_probs = 0.0
+        self.log_probs_num = 0

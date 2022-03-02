@@ -67,6 +67,7 @@ SAC_V2_HOPPER.update(
         "env": "Hopper-v3",
         "n_initial_exploration_steps": 1000,
         "max_env_steps": int(1e6),
+        "fixed_alpha": None,
     }
 )
 
@@ -76,8 +77,24 @@ SAC_V2_CHEETAH.update(
         "env": "HalfCheetah-v3",
         "n_initial_exploration_steps": 10000,
         "max_env_steps": int(1.5e6),
+        "fixed_alpha": None,
     }
 )
+
+SAC_V2_CHEETAH_FIXED_ALPHA = SAC_V2_CHEETAH.copy()
+SAC_V2_CHEETAH_FIXED_ALPHA.update(
+    {
+        "fixed_alpha": 0.2,
+    }
+)
+
+SAC_V2_HOPPER_FIXED_ALPHA = SAC_V2_HOPPER.copy()
+SAC_V2_HOPPER_FIXED_ALPHA.update(
+    {
+        "fixed_alpha": 0.2,
+    }
+)
+
 
 td3_base = {
     "policy": "TD3",
