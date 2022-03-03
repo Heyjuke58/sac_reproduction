@@ -13,7 +13,7 @@ Target network update smoothing (τ): 0.005
 Fixed alpha: None
 Frequency of target updates: 1
 
-avg_reward,log_probs,alpha,time,env_steps,grad_steps,seed
+avg_reward,avg_log_probs,alpha,time,env_steps,grad_steps,seed
 14.28456934642899,nan,1.0,0,0,0,2
 221.7102623046754,-1.5860761482139085,0.39133787155151367,44.58331395900001,5000,4000,2
 273.44468528146575,-0.7788000967264176,0.1459551602602005,99.86388878799997,10000,9000,2

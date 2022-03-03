@@ -148,7 +148,7 @@ class SACTrainerV2(SACTrainer):
                     f"Frequency of target updates: {self.target_update_freq}\n\n"
                 )
                 csv_f.write(hyperpars_str)
-                csv_f.write("avg_reward,log_probs,alpha,time,env_steps,grad_steps,seed\n")
+                csv_f.write("avg_reward,avg_log_probs,alpha,time,env_steps,grad_steps,seed\n")
 
         # logged things
         self.elapsed_grad_steps = 0
