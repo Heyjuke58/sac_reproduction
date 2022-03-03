@@ -6,7 +6,7 @@
         - wird gerundet auf vielfache von epoch_length
     - ab einem anderen Zeitpunkt wird angefangen zu trainieren (erst sollen genug samples im replay buffer sein)
         - min_replay_buffer_size: Wie viele Steps müssen im Replay buffer stehen, damit mit dem Training begonnen wird
-- im paper werden ko-varianzen erwähnt, aber... TODO
+- im paper werden ko-varianzen erwähnt, aber die Gaussians sind alle unabhängig
     - output size = 2 * action_space
 - im policy loss wird im code nur eins der beiden value functions für KL benutzt
 - policy loss hat auch regularization:

@@ -12,7 +12,7 @@ def parse_arguments() -> dict[str, Any]:
         type=int,
         dest="runs",
         default=1,
-        help="How many runs per algorithm should be performed.",
+        help="How many runs per algorithm should be performed. Increments the seed to get different results.",
     )
 
     parser.add_argument(

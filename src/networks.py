@@ -14,8 +14,11 @@ LOG_SIG_MIN = -20
 
 
 class Policy(nn.Module):
-    # Gaussian policy
-    # For each action in the action space, output a scalar in [-1, 1]
+    """
+    Gaussian policy
+    For each action in the action space, output a scalar in [-1, 1]
+    """
+
     def __init__(
         self,
         state_dim: int,
@@ -86,7 +89,9 @@ class Policy(nn.Module):
             return self.max_action * actions, (log_probs, mus, log_sigmas)
 
     def get_action(self, state: ndarray):
-        """Get action for evaluation of policy"""
+        """
+        Get action for evaluation of policy
+        """
         with torch.no_grad():
             action, _ = self.forward(
                 torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0),
@@ -96,7 +101,10 @@ class Policy(nn.Module):
 
 
 class Value(nn.Module):
-    # V gets the state, outputs a single scalar (soft value)
+    """
+    Value funtion network gets the state, outputs a single scalar (soft value)
+    """
+
     def __init__(self, state_dim: int, hidden_dim: int, adam_kwargs: dict[str, Any]):
         super(Value, self).__init__()
 
@@ -113,7 +121,10 @@ class Value(nn.Module):
 
 
 class Q(nn.Module):
-    # Q gets the state and action, outputs a single scalar (state-action value)
+    """
+    Q function network gets the state and action, outputs a single scalar (state-action value)
+    """
+
     def __init__(
         self, state_dim: int, action_dim: int, hidden_dim: int, adam_kwargs: dict[str, Any]
     ):
