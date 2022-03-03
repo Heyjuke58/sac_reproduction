@@ -18,6 +18,10 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class SACTrainer:
+    """
+    SAC Trainer class which enables training of the SAC model structure proposed in https://arxiv.org/pdf/1801.01290.pdf
+    """
+
     def __init__(
         self,
         seed: int,
@@ -43,20 +47,26 @@ class SACTrainer:
         dest_res_path: str = "./results",
     ) -> None:
         """
-        :param seed:
-        :param hidden_dim:
-        :param max_action:
-        :param grad_steps:
-        :param batch_size:
-        :param replay_buffer_size:
-        :param min_replay_buffer_size:
+        :param seed: The seed for deterministic behaviour
+        :param hidden_dim: Hidden dimension size for all the used NN
+        :param max_action: Max action scaling
+        :param grad_steps: Number of gradient steps in each iteration (default=1)
+        :param batch_size: Batch size
+        :param replay_buffer_size: Maximum size of the replay buffer
+        :param min_replay_buffer_size: Minimum size of the replay buffer before batches will be sampled from it
         :param target_smoothing: τ from the paper, for exponential moving average of Value. Set to 1 for hard update (with higher interval).
         :param target_update_freq: For hard update of Value. Set to 1 for exponentially moving average or Value.
-        :param env:
-        :param n_initial_exploration_steps:
-        :param scale_reward:
-        :param max_env_steps:
+        :param env: The environment to train on
+        :param n_initial_exploration_steps: Number of initial exploration steps with a uniform policy
+        :param scale_reward: Reward scaling (basically this corresponds to the inverse of the temperature hyperparameter)
+        :param discount: Discount
+        :param max_env_steps: Max steps for one episode
+        :param eval_freq: Frequency of evaluation of the policy (per training iteration)
+        :param eval_episodes: Number of episodes for evaluation
+        :param file_name: Name of the log and model export file
         :param adam_kwargs: keyword arguments for adam optimizer (same for all nets)
+        :param dest_model_path: Path destination of the exported models (different path needed for testing)
+        :param dest_res_path: Path destination of the logged results (different path needed for testing)
         """
         # Make env
         if isinstance(env, str):
@@ -133,7 +143,7 @@ class SACTrainer:
 
         # TODO init weights?
 
-    def train(self):
+    def train(self) -> None:
         """
         Train the model for a number of iterations.
         In every iteration, one environment step is taken
@@ -142,8 +152,8 @@ class SACTrainer:
         state = self.env.reset()
 
         # initial evaluation
-        avg_reward = self.eval_policy()
-        self.write_eval_to_csv(avg_reward, 0, 0)
+        avg_return = self.eval_policy()
+        self.write_eval_to_csv(avg_return, 0, 0)
 
         self.start_time = perf_counter()
         self.episode_num = 0
@@ -152,9 +162,12 @@ class SACTrainer:
         for i in range(self.max_env_steps):
             state = self._train_iteration(state, i)
 
-    def _value_and_policy_update(self, states: Tensor):
+    def _value_and_policy_update(self, states: Tensor) -> None:
+        """
+        Parameter updates for the policy and the value network.
+        They are done together since the same sampled actions and log probs from the policy are used for both updates.
+        """
         # all: (b, |action_space|)
-        # TODO: test take min of q values
         sampled_actions, (log_probs, mus, log_sigmas) = self.policy(states, deterministic=False)
         q1s = self.qf1(states, sampled_actions)
         policy_kl_loss = torch.mean(log_probs - q1s)
@@ -180,7 +193,11 @@ class SACTrainer:
         value_loss.backward()
         self.value.optimizer.step()
 
-    def _value_update(self, states: Tensor):
+    def _value_update(self, states: Tensor) -> None:
+        """
+        Parameter update for the value network
+        Only used when order of algorithm is done as stated in the paper (commented lines TODO: line numbers)
+        """
         values = self.value(states)  # (b, 1)
         with torch.no_grad():
             sampled_actions, (log_probs, _, _) = self.policy(states, deterministic=False)
@@ -194,7 +211,10 @@ class SACTrainer:
         value_loss.backward()
         self.value.optimizer.step()
 
-    def _q_update(self, states, actions, next_states, rewards, dones):
+    def _q_update(self, states, actions, next_states, rewards, dones) -> None:
+        """
+        Parameter updates for both Q networks
+        """
         with torch.no_grad():
             value_targets_next = self.target_value(next_states)  # (b, 1)
         q_hat = self.scale_reward * rewards + (1 - dones) * self.discount * value_targets_next
@@ -206,7 +226,11 @@ class SACTrainer:
             qf_loss.backward()
             qf.optimizer.step()
 
-    def _policy_update(self, states: Tensor):
+    def _policy_update(self, states: Tensor) -> None:
+        """
+        Parameter update for the policy network
+        Only used when order of algorithm is done as stated in the paper (commented lines TODO: line numbers)
+        """
         # all: (b, |action_space|)
         sampled_actions, (log_probs, mus, log_sigmas) = self.policy(states, deterministic=False)
         q1s = self.qf1(states, sampled_actions)
@@ -221,8 +245,10 @@ class SACTrainer:
         policy_loss.backward()
         self.policy.optimizer.step()
 
-    def _target_value_update(self):
-        # update exponentially moving average of Value / hard update:
+    def _target_value_update(self) -> None:
+        """
+        Parameter update of the target value network with exponentially moving average of Value
+        """
         if self.elapsed_grad_steps % self.target_update_freq == 0:
             new_target_value = OrderedDict()
             for (v_param_name, v_param), (_, v_t_param) in zip(
@@ -283,8 +309,8 @@ class SACTrainer:
         if (iteration + 1) % self.eval_freq == 0:
             elapsed_time = perf_counter() - self.start_time
             start_time_eval = perf_counter()
-            avg_reward = self.eval_policy()
-            self.write_eval_to_csv(avg_reward, elapsed_time, iteration + 1)
+            avg_return = self.eval_policy()
+            self.write_eval_to_csv(avg_return, elapsed_time, iteration + 1)
 
             # ignore time for evaluation by adding it to start time
             self.start_time += perf_counter() - start_time_eval
@@ -292,6 +318,11 @@ class SACTrainer:
         return state
 
     def _do_updates(self, states, actions, next_states, rewards, dones) -> None:
+        """
+        Update all the parameters of the networks
+        We find, that the order from the paper differs to the actual order in the code.
+        We will replicate the order like it is in the code.
+        """
         # order as in code
         self._value_and_policy_update(states)
         self._q_update(states, actions, next_states, rewards, dones)
@@ -303,8 +334,12 @@ class SACTrainer:
         # self._policy_update(states)
         # self._target_value_update()
 
-    def eval_policy(self):
-        avg_reward = 0.0
+    def eval_policy(self) -> float:
+        """
+        Evaluate the policy for #self.eval_episodes episodes.
+        Returns the average return over the episodes
+        """
+        avg_return = 0.0
         for i in range(self.eval_episodes):
             # several seeds for evaluation
             self.eval_env.seed(self.seed + 100 + i)
@@ -312,22 +347,25 @@ class SACTrainer:
             while not done:
                 action = self.policy.get_action(state)
                 state, reward, done, _ = self.eval_env.step(action)
-                avg_reward += reward
+                avg_return += reward
 
-        avg_reward /= self.eval_episodes
+        avg_return /= self.eval_episodes
 
         print("---------------------------------------")
-        print(f"Evaluation over {self.eval_episodes} episodes: {avg_reward:.3f}")
+        print(f"Evaluation over {self.eval_episodes} episodes: {avg_return:.3f}")
         print("---------------------------------------")
         self.save(self.dest_model_path)
-        return avg_reward
+        return avg_return
 
-    def write_eval_to_csv(self, avg_reward, time, env_steps):
+    def write_eval_to_csv(self, avg_return, time, env_steps):
+        """
+        Logs evaluation and training results to csv.
+        """
         with open(self.res_file, "a") as csv_f:
             writer = csv.writer(csv_f, delimiter=",")
             writer.writerow(
                 [
-                    avg_reward,
+                    avg_return,
                     "nan" if self.log_probs_num == 0 else self.avg_log_probs / self.log_probs_num,
                     time,
                     env_steps,

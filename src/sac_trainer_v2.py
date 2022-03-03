@@ -30,11 +30,11 @@ class SACTrainerV2(SACTrainer):
         grad_steps: int,
         batch_size: int,
         replay_buffer_size: int,
-        min_replay_buffer_size: int,  # check usage
+        min_replay_buffer_size: int,
         target_smoothing: float,
         target_update_freq: int,
         env: Union[str, gym.Env],
-        n_initial_exploration_steps: int,  # check usage
+        n_initial_exploration_steps: int,
         discount: float,
         max_env_steps: int,
         eval_freq: int,
@@ -46,6 +46,29 @@ class SACTrainerV2(SACTrainer):
         max_action: float = 1.0,
         fixed_alpha: Optional[float] = None,
     ) -> None:
+        """
+        :param seed: The seed for deterministic behaviour
+        :param hidden_dim: Hidden dimension size for all the used NN
+        :param grad_steps: Number of gradient steps in each iteration (default=1)
+        :param batch_size: Batch size
+        :param replay_buffer_size: Maximum size of the replay buffer
+        :param min_replay_buffer_size: Minimum size of the replay buffer before batches will be sampled from it
+        :param target_smoothing: τ from the paper, for exponential moving average of Value. Set to 1 for hard update (with higher interval).
+        :param target_update_freq: For hard update of Value. Set to 1 for exponentially moving average or Value.
+        :param env: The environment to train on
+        :param n_initial_exploration_steps: Number of initial exploration steps with a uniform policy
+        :param scale_reward: Reward scaling (basically this corresponds to the inverse of the temperature hyperparameter)
+        :param discount: Discount
+        :param max_env_steps: Max steps for one episode
+        :param eval_freq: Frequency of evaluation of the policy (per training iteration)
+        :param eval_episodes: Number of episodes for evaluation
+        :param file_name: Name of the log and model export file
+        :param adam_kwargs: keyword arguments for adam optimizer (same for all nets)
+        :param dest_model_path: Path destination of the exported models (different path needed for testing)
+        :param dest_res_path: Path destination of the logged results (different path needed for testing)
+        :param max_action: Max action scaling
+        :param fixed_alpha: Set this to a float value to train with a fixed alpha (if set to None alpha will be tuned in training)
+        """
         # Make env
         if isinstance(env, str):
             self.env = gym.make(env)
@@ -131,6 +154,9 @@ class SACTrainerV2(SACTrainer):
         self.elapsed_grad_steps = 0
 
     def _q_update(self, states, actions, next_states, rewards, dones):
+        """
+        Parameter updates for both Q networks
+        """
         with torch.no_grad():
             sampled_actions, (log_probs, mus, log_sigmas) = self.policy(
                 next_states, deterministic=False
@@ -154,6 +180,9 @@ class SACTrainerV2(SACTrainer):
             q.optimizer.step()
 
     def _policy_update(self, states: Tensor):
+        """
+        Parameter update for the policy network
+        """
         # all: (b, |action_space|)
         sampled_actions, (log_probs, mus, log_sigmas) = self.policy(states, deterministic=False)
 
@@ -169,8 +198,11 @@ class SACTrainerV2(SACTrainer):
         self.policy.optimizer.step()
 
     def _alpha_update(self, states: Tensor):
+        """
+        Alpha update (only called when fixed alpha is None)
+        """
         with torch.no_grad():
-            sampled_actions, (log_probs, mus, log_sigmas) = self.policy(states, deterministic=False)
+            _, (log_probs, _, _) = self.policy(states, deterministic=False)
         alpha_loss = torch.mean(
             -1.0 * (torch.exp(self.log_alpha) * (log_probs + self.target_entropy))
         )
@@ -179,7 +211,9 @@ class SACTrainerV2(SACTrainer):
         self.log_alpha_optim.step()
 
     def _target_q_update(self):
-        # update exponentially moving average of both Q functions (or hard update):
+        """
+        Parameter update of both target Q networks with exponentially moving average of both Q functions
+        """
         if self.elapsed_grad_steps % self.target_update_freq == 0:
             for q, t_q in zip([self.qf1, self.qf2], [self.target_qf1, self.target_qf2]):
 
@@ -194,21 +228,25 @@ class SACTrainerV2(SACTrainer):
                 t_q.load_state_dict(new_target_q)
 
     def _do_updates(self, states, actions, next_states, rewards, dones) -> None:
+        """
+        Update all the parameters of the networks
+        Alpha will be updated unless a fixed alpha is given when initializing the trainer.
+        """
         self._q_update(states, actions, next_states, rewards, dones)
         self._policy_update(states)
         if not self.fixed_alpha:
             self._alpha_update(states)
         self._target_q_update()
 
-    def _log_updates(self):
-        pass
-
-    def write_eval_to_csv(self, avg_reward, time, env_steps):
+    def write_eval_to_csv(self, avg_return, time, env_steps):
+        """
+        Logs evaluation and training results to csv. Also logs alpha values.
+        """
         with open(self.res_file, "a") as csv_f:
             writer = csv.writer(csv_f, delimiter=",")
             writer.writerow(
                 [
-                    avg_reward,
+                    avg_return,
                     "nan" if self.log_probs_num == 0 else self.avg_log_probs / self.log_probs_num,
                     torch.exp(self.log_alpha).item(),
                     time,

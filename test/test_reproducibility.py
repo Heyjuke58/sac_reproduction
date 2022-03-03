@@ -6,7 +6,8 @@ from copy import deepcopy
 import torch
 from TD3.main import main as td3_main
 from src.sac_trainer import SACTrainer
-from src.hyperparameters import SAC_HOPPER
+from src.sac_trainer_v2 import SACTrainerV2
+from src.hyperparameters import SAC_HOPPER, SAC_V2_HOPPER
 from test import Tester
 
 
@@ -21,7 +22,9 @@ class ReproducibilityTester(Tester):
         return super().setUp()
 
     def test_td3_same_seed(self):
-        # test whether multiple runs with the same seed leads to exact same model weights for their TD3
+        """
+        Test whether multiple runs with the same seed leads to exact same model weights for their TD3
+        """
 
         td3 = TD3(state_dim=self.state_dim, action_dim=self.action_dim, max_action=self.max_action)
         file_name = f"TD3_{self.env_str}_{self.seed}"
@@ -63,7 +66,9 @@ class ReproducibilityTester(Tester):
             self.assertTrue(torch.equal(x, y))
 
     def test_sac_same_seed(self):
-        # test whether multiple runs with the same seed leads to exact same model weights for our SAC
+        """
+        Test whether multiple runs with the same seed leads to exact same model weights for our SAC
+        """
         sac_hpars = SAC_HOPPER.copy()
         sac_hpars.update(
             {
@@ -92,12 +97,34 @@ class ReproducibilityTester(Tester):
         for x, y in zip(sac1.target_value.parameters(), sac2.target_value.parameters()):
             self.assertTrue(torch.equal(x, y))
 
-    # def test_rsample(self):
-    #     """
-    #     Sanity check for seeding rsample
-    #     """
-    #     sac1 = SAC(**SAC_HOPPER)
-    #     sac1.train()
-    #
-    #     sac2 = SAC(**SAC_HOPPER)
-    #     sac2.train()
+    def test_sac_v2_same_seed(self):
+        """
+        Test whether multiple runs with the same seed leads to exact same model weights for our SAC V2
+        """
+        sac_v2_hpars = SAC_V2_HOPPER.copy()
+        sac_v2_hpars.update(
+            {
+                "seed": 12,
+                "max_env_steps": 2000,
+                "file_name": "sac_v2",
+                "dest_model_path": "./test/models",
+                "dest_res_path": "./test/results",
+            }
+        )
+
+        sac1 = SACTrainerV2(**sac_v2_hpars)
+        sac1.train()
+
+        sac2 = SACTrainerV2(**sac_v2_hpars)
+        sac2.train()
+
+        for x, y in zip(sac1.policy.parameters(), sac2.policy.parameters()):
+            self.assertTrue(torch.equal(x, y))
+        for x, y in zip(sac1.qf1.parameters(), sac2.qf1.parameters()):
+            self.assertTrue(torch.equal(x, y))
+        for x, y in zip(sac1.qf2.parameters(), sac2.qf2.parameters()):
+            self.assertTrue(torch.equal(x, y))
+        for x, y in zip(sac1.value.parameters(), sac2.value.parameters()):
+            self.assertTrue(torch.equal(x, y))
+        for x, y in zip(sac1.target_value.parameters(), sac2.target_value.parameters()):
+            self.assertTrue(torch.equal(x, y))
