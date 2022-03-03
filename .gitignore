@@ -2,7 +2,6 @@ MUJOCO_LOG.TXT
 models/*_policy
 models/*_actor
 results/*.csv
-results/plot/*
 test/models/*
 test/results/*.csv
 

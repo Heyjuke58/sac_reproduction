@@ -1,7 +1,9 @@
 # Soft Actor-Critic: Off-Policy Maximum Entropy Deep Reinforcement Learning with a Stochastic Actor -  A reproduction
-Reproduction of SAC from scratch [[Haarnoja et al.]](https://arxiv.org/pdf/1801.01290.pdf)
+Reproduction of SAC from scratch [[Haarnoja et al. 2018]](https://arxiv.org/pdf/1801.01290.pdf) and [Haarnoja et al. 2019](https://arxiv.org/pdf/1812.05905.pdf)
+
 
 # Setup
+
 
 - Install MuJoCo ([Instructions (See "Install MuJoCo")](https://github.com/openai/mujoco-py#install-mujoco))
 
@@ -10,6 +12,11 @@ Specifically for Ubuntu:
 2. Extract the downloaded `mujoco210` directory into `~/.mujoco/mujoco210`.
 3. Set LD_LIBRARY_PATH environment variable (for instance in .bashrc, etc.): `export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${HOME}/.mujoco/mujoco210/bin`
 
+- Clone repository including submodule for TD3:
+
+```sh
+git clone --recurse-submodules git@github.com:Heyjuke58/sac_reproduction.git
+```
 - Create and activate conda environment from `environment.yml`
 
 ```sh
@@ -47,7 +54,20 @@ python render_policy.py --model=<path-to-model-file>
 
 Note that the file name needs to adhere to the used format as the algorithm and environment types are extracted from it.
 
+# Plot results
+
+To plot results from runs, you have to move one or multiple result csv files into the folder `results/plot` and run the following command:
+
+```sh
+python plot.py --x=<x> -y=<y>
+```
+Where `x` must be one of `["time", "env_steps", "grad_steps"]` and `y` one of `["avg_return", "log_probs_alpha"]`
+
+Note that the data from every file is splitted by the column `seed` s.t. the return is averaged over multiple runs.
+
 # Compute Resources
+
+Used Hardware:
 TODO
 
 # Results, Random Seeds, etc.

@@ -39,6 +39,9 @@ def parse_args() -> dict[str, Any]:
 
 
 def main():
+    """
+    Renders an agent specified by command line parameter on the corresponding environment for 10000 steps
+    """
     args = parse_args()
 
     env = gym.make(args["env"])

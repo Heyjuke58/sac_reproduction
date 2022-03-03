@@ -9,6 +9,11 @@ from src.utils import get_timestamp
 
 
 class Experiment:
+    """
+    Experiment class which is able to run experiments for our 3 studied models SAC, SAC-V2 and TD3
+    Hyperparameters for the 3 models come from src/hyperparameters.py
+    """
+
     def __init__(
         self,
         runs: int,

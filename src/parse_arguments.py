@@ -4,6 +4,9 @@ import src.hyperparameters as hyperparameters
 
 
 def parse_arguments() -> dict[str, Any]:
+    """
+    Argument parsing for the main.py script
+    """
     parser = argparse.ArgumentParser()
 
     parser.add_argument(

@@ -51,3 +51,15 @@ Hauke:
     - TD3:
         - 3x TD3 Hopper 1M env steps (1.8h each) -> 5.5h done!
         - 3x TD3 Cheetah 1.5M env steps (~4h each) -> 12h
+
+# TODO
+
+- [ ] readme
+    - [ ] compute resources
+    - [x] plotting
+- [ ] checklist
+- [ ] runs
+    - [ ] in den richtigen ordner packen
+- [ ] plotting
+- [ ] video
+- [ ] documentation
