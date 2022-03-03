@@ -26,10 +26,15 @@ def parse_args() -> dict[str, Any]:
     file_info = filename.split("_")
 
     args["alg_name"] = file_info[0]
-    args["env"] = file_info[1]
-    assert args["alg_name"] in ["SAC", "TD3"]
-    assert args["env"] in ["Hopper-v3", "HalfCheetah-v3"]
 
+    allowed_envs = ["HalfCheetah-v3", "Hopper-v3"]
+    for allowed_env in allowed_envs:
+        if allowed_env in filename:
+            args["env"] = allowed_env
+            break
+
+    assert args["alg_name"] in ["SAC", "TD3"]
+    assert "env" in args.keys()
     return args
 
 

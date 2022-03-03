@@ -10,6 +10,7 @@ Batch size: 256
 Discount factor: 0.99
 Target entropy: -6
 Target network update smoothing (τ): 0.005
+Fixed alpha: None
 Frequency of target updates: 1
 
 avg_reward,log_probs,alpha,time,env_steps,grad_steps,seed
