@@ -1,5 +1,5 @@
 MUJOCO_LOG.TXT
-models/*
+models/*_policy
 results/*.csv
 results/plot/*
 test/models/*
