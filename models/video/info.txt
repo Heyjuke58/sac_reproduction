@@ -1,0 +1,15 @@
+SAC_HalfCheetah-v3_2022_03_04-08-58-33_policy:
+    - avg eval return ~ 8880
+SAC_V2_HalfCheetah-v3_2022_03_04-08-57-56_policy_worse:
+    - avg eval return ~ 5850
+    - fixed alpha = 0.2
+SAC_V2_Hopper-v3_2022_03_03-09-12-39_policy_worse:
+    - avg eval return ~ 1580
+    - learned alpha = 0.03
+SAC_V2_Hopper-v3_2022_03_03-16-01-38_policy:
+    - avg eval return ~ 3630
+    - fixed alpha = 0.2
+TD3_HalfCheetah-v3_2022_03_03-11-06-10_actor:
+    - avg eval return ~ 12110
+TD3_Hopper-v3_2022_02_24-11-05-40_actor:
+    - avg eval return ~ 3440

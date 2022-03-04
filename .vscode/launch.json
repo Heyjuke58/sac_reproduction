@@ -21,7 +21,10 @@
             "request": "launch",
             "program": "${workspaceFolder}/plot.py",
             "args": [
-                "-x=time",
+                "-x=env_steps",
+                "-y=avg_return",
+                "-e=Hopper",
+                "-b=15000",
             ],
             "console": "integratedTerminal"
         },

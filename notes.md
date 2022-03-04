@@ -54,12 +54,13 @@ Hauke:
 
 # TODO
 
-- [ ] readme
-    - [ ] compute resources
+- [x] readme
+    - [x] compute resources
     - [x] plotting
 - [ ] checklist
-- [ ] runs
-    - [ ] in den richtigen ordner packen
-- [ ] plotting
-- [ ] video
-- [ ] documentation
+- [x] runs
+    - [x] in den richtigen ordner packen
+- [x] plotting
+- [x] video
+- [x] documentation
+- [ ] presentation

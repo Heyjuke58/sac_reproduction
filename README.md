@@ -21,7 +21,7 @@ git clone --recurse-submodules git@github.com:Heyjuke58/sac_reproduction.git
 
 ```sh
 conda env create -f environment.yml
-conda activate sac
+conda activate sac2
 ```
 
 - To test your setup you can run `python try_mujoco.py`
@@ -59,17 +59,29 @@ Note that the file name needs to adhere to the used format as the algorithm and 
 To plot results from runs, you have to move one or multiple result csv files into the folder `results/plot` and run the following command:
 
 ```sh
-python plot.py --x=<x> -y=<y>
+python plot.py --x=<x> -y=<y> -e=<env>
 ```
-Where `x` must be one of `["time", "env_steps", "grad_steps"]` and `y` one of `["avg_return", "log_probs_alpha"]`
+Choices:
+- `x`: `["time", "env_steps", "grad_steps"]`
+- `y`: `["avg_return", "log_probs_alpha"]`
+- `e`: `["Hopper", "HalfCheetah"]`
+- `b`: Bin size (to reduce noise in plot)
 
 Note that the data from every file is splitted by the column `seed` s.t. the return is averaged over multiple runs.
-
-# Compute Resources
-
-Used Hardware:
-TODO
 
 # Results, Random Seeds, etc.
 
 ...can all be found in their respective files in the `results` folder.
+
+# Exact Software Versions
+
+... can be found in `environment-exact.yml`
+
+# Compute Resources
+
+Runs have been splitted to 2 GPUs:
+- Nvidia Geforce RTX 3060 Laptop GPU
+    - 23.2 h with 17 W ≅ 0.3944 kWh ≘ 12.68 cent (€) (assuming 32.16 cent/kWh)
+- Nvidia Geforce GTX 1070Ti
+    - 19.56 h with 70 W ≅ 1.3692 kWh ≘ 44.03 cent
+Total: 56.71 cent (Only final evaluation and only GPU costs)
